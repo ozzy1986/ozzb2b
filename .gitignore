@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.prod.example
 *.local
 credentials.json
 
@@ -71,6 +72,7 @@ Thumbs.db
 *.tmp
 
 # ---- Misc archives ----
+*.tar
 *.tar.gz
 sitemap.xml
 sitemap.xml.gz
