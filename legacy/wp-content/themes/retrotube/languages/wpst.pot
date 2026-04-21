@@ -1,0 +1,1042 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: retrotube\n"
+"Report-tion-Date: 2016-05-12 22:11+0100\n"
+"PO-Revision-Date: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-KeywordsList: __;_e;_n\n"
+"X-Poedit-Basepath: /home/fulgor/GIT/bones\n"
+"Last-Translator: \n"
+"X-Poedit-SearchPath-0: /home/fulgor/GIT/bones\n"
+
+/********************/
+/***** FRONTEND *****/
+/********************/
+
+msgid "This Theme needs <a href="%s" target="_blank">WP-Script Core</a> to be installed and activated."
+msgstr ""
+
+msgid "Oops! That page can&rsquo;t be found."
+msgstr ""
+
+msgid "It looks like nothing was found at this location. Maybe try one of the links below or a search?"
+msgstr ""
+
+msgid "videos"
+msgstr ""
+
+msgid "Videos by:"
+msgstr ""
+
+msgid "One thought on &ldquo;%2$s&rdquo;"
+msgstr ""
+
+msgid "%1$s thoughts on &ldquo;%2$s&rdquo;"
+msgstr ""
+
+msgid "Comment navigation"
+msgstr ""
+
+msgid "Older Comments"
+msgstr ""
+
+msgid "Newer Comments"
+msgstr ""
+
+msgid "Comments are closed."
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Website"
+msgstr ""
+
+msgid "Comment"
+msgstr ""
+
+msgid "No image"
+msgstr ""
+
+msgid "Nothing found"
+msgstr ""
+
+msgid "Sorry, but nothing matched your search terms. Please try again with some different keywords."
+msgstr ""
+
+msgid "Search results for:"
+msgstr ""
+
+msgid "Search results for: %s"
+msgstr ""
+
+msgid "Thanks for submitting a video! Your submission is being moderated."
+msgstr ""
+
+msgid "Captcha verification failed, please try again."
+msgstr ""
+
+msgid "Please click on the reCAPTCHA box."
+msgstr ""
+
+msgid "Video infos"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Video type"
+msgstr ""
+
+msgid "Video URL"
+msgstr ""
+
+msgid "Iframe / Embed code"
+msgstr ""
+
+msgid "Video details"
+msgstr ""
+
+msgid "Thumbnail URL"
+msgstr ""
+
+msgid "Category"
+msgstr ""
+
+msgid "Duration"
+msgstr ""
+
+msgid "hour"
+msgstr ""
+
+msgid "min"
+msgstr ""
+
+msgid "sec"
+msgstr ""
+
+msgid "Submit a video"
+msgstr ""
+
+msgid "You must be logged to submit a video. Please <a href="%s">login</a> or <a href="%s">register</a> a new account."
+msgstr ""
+
+msgid "Video submission is disabled."
+msgstr ""
+
+msgid "Join %s"
+msgstr ""
+
+msgid "Username"
+msgstr ""
+
+msgid "The passwords you entered do not match. Your password was not updated."
+msgstr ""
+
+msgid "The Email you entered is not valid. Please try again."
+msgstr ""
+
+msgid "This email is already used by another user. Try a different one."
+msgstr ""
+
+msgid "Your profile has been updated."
+msgstr ""
+
+msgid "First Name"
+msgstr ""
+
+msgid "Last Name"
+msgstr ""
+
+msgid "Display Name as"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Repeat Password"
+msgstr ""
+
+msgid "Biographical Information"
+msgstr ""
+
+msgid "Update your profile"
+msgstr ""
+
+msgid "Loading..."
+msgstr ""
+
+msgid "Sign up"
+msgstr ""
+
+msgid "Login"
+msgstr ""
+
+msgid "Register"
+msgstr ""
+
+msgid "Don\'t have an account?"
+msgstr ""
+
+msgid "Already have an account?"
+msgstr ""
+
+msgid "Lost Password?"
+msgstr ""
+
+msgid "Reset Password"
+msgstr ""
+
+msgid "Logout"
+msgstr ""
+
+msgid "My channel"
+msgstr ""
+
+msgid "Enter the username or e-mail you used in your profile. A password reset link will be sent to you by email."
+msgstr ""
+
+msgid "Username or E-mail"
+msgstr ""
+
+msgid "Get new password"
+msgstr ""
+
+msgid "Login access is disabled"
+msgstr ""
+
+msgid "Session token has expired, please reload the page and try again"
+msgstr ""
+
+msgid "Please fill all form fields"
+msgstr ""
+
+msgid "Login successful, reloading page..."
+msgstr ""
+
+msgid "Registration complete. You can now login."
+msgstr ""
+
+msgid "Password Reset. Please check your email."
+msgstr ""
+
+msgid "Please enter a username or e-mail address."
+msgstr ""
+
+msgid "There is no user registered with that email address."
+msgstr ""
+
+msgid "Invalid username or e-mail."
+msgstr ""
+
+msgid "Password reset is not allowed for this user"
+msgstr ""
+
+msgid "Someone requested that the password be reset for the following account:"
+msgstr ""
+
+msgid "Username: %s"
+msgstr ""
+
+msgid "If this was a mistake, just ignore this email and nothing will happen."
+msgstr ""
+
+msgid "To reset your password, visit the following address:"
+msgstr ""
+
+msgid "[%s] Password Reset"
+msgstr ""
+
+msgid "The e-mail could not be sent.<br />Possible reason: your host may have disabled the mail() function."
+msgstr ""
+
+msgid "Login to %s"
+msgstr ""
+
+msgid "Thank you!"
+msgstr ""
+
+msgid "Main Menu"
+msgstr ""
+
+msgid "First"
+msgstr ""
+
+msgid "Previous"
+msgstr ""
+
+msgid "Next"
+msgstr ""
+
+msgid "Last"
+msgstr ""
+
+msgid "I like this"
+msgstr ""
+
+msgid "I dislike this"
+msgstr ""
+
+msgid "Like"
+msgstr ""
+
+msgid "Homepage"
+msgstr ""
+
+msgid "Display widgets on your homepage."
+msgstr ""
+
+msgid "Sidebar"
+msgstr ""
+
+msgid "Display widgets in your sidebar."
+msgstr ""
+
+msgid "Under the video"
+msgstr ""
+
+msgid "Display widgets under the video in your single video pages."
+msgstr ""
+
+msgid "Footer"
+msgstr ""
+
+msgid "Display widgets in your footer."
+msgstr ""
+
+msgid "Latest videos"
+msgstr ""
+
+msgid "Most viewed videos"
+msgstr ""
+
+msgid "Longest videos"
+msgstr ""
+
+msgid "Popular videos"
+msgstr ""
+
+msgid "Random videos"
+msgstr ""
+
+msgid "Related videos"
+msgstr ""
+
+msgid "Show more related videos"
+msgstr ""
+
+msgid "More videos"
+msgstr ""
+
+msgid "Read more"
+msgstr ""
+
+msgid "Search..."
+msgstr ""
+
+msgid "Edit %s"
+msgstr ""
+
+msgid "Follow me on:"
+msgstr ""
+
+msgid "Welcome"
+msgstr ""
+
+msgid "Submit a Video"
+msgstr ""
+
+msgid "My Channel"
+msgstr ""
+
+msgid "My Profile"
+msgstr ""
+
+msgid "Welcome Guest"
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "Share"
+msgstr ""
+
+msgid "views"
+msgstr ""
+
+msgid "From"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Loading photos"
+msgstr ""
+
+
+/*******************/
+/***** BACKEND *****/
+/*******************/
+
+msgid "Featured"
+msgstr ""
+
+msgid "Video information"
+msgstr ""
+
+msgid "Will be displayed in the carousel on your homepage."
+msgstr ""
+
+msgid "Video URL"
+msgstr ""
+
+msgid "Paste here the video URL (<strong>MP4</strong>, <strong>YouTube</strong> or <strong>Google Drive</strong> link) or upload a video file. It will be played with %s player."
+msgstr ""
+
+msgid "Video embed code"
+msgstr ""
+
+msgid "Paste here the embed code (eg. YouTube iframe). It will automatically display the video player in the front of your site."
+msgstr ""
+
+msgid "Video shortcode"
+msgstr ""
+
+msgid "Paste here the video shortcode (eg. [TM plugin="https://drive.google.com/..."]). It will automatically display the video player in the front of your site."
+msgstr ""
+
+msgid "Main thumbnail"
+msgstr ""
+
+msgid "Paste here the main thumb URL or upload an image file. If there isn\'t a featured image, this image will be used as main thumb."
+msgstr ""
+
+msgid "Thumbnails"
+msgstr ""
+
+msgid "Used for thumbnails rotation."
+msgstr ""
+
+msgid "Tracking URL"
+msgstr ""
+
+msgid "Paste here the tracking URL you want to display as link under the video in the front of your site (http://...)."
+msgstr ""
+
+msgid "Create Video Submit page"
+msgstr ""
+
+msgid "This action will create a "Submit a Video" page in your admin."
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+msgid "Create My Profile page"
+msgstr ""
+
+msgid "This action will create a "My profile" page in your admin."
+msgstr ""
+
+msgid "Create Categories page"
+msgstr ""
+
+msgid "This action will create an illustrated categories page in your admin."
+msgstr ""
+
+msgid "Create Tags page"
+msgstr ""
+
+msgid "This action will create a tags list page in your admin."
+msgstr ""
+
+msgid "Create Actors page"
+msgstr ""
+
+msgid "This action will create an actors list page in your admin."
+msgstr ""
+
+msgid "Create Menu"
+msgstr ""
+
+msgid "This action will create a menu in your admin."
+msgstr ""
+
+msgid "Create Widgets"
+msgstr ""
+
+msgid "This action will integrate video block widgets in your admin."
+msgstr ""
+
+msgid "Theme Options"
+msgstr ""
+
+msgid "General"
+msgstr ""
+
+msgid "Visual options"
+msgstr ""
+
+msgid "Logo & Favicon"
+msgstr ""
+
+msgid "Header"
+msgstr ""
+
+msgid "Content"
+msgstr ""
+
+msgid "Sidebar"
+msgstr ""
+
+msgid "Footer"
+msgstr ""
+
+msgid "Membership"
+msgstr ""
+
+msgid "Advertising"
+msgstr ""
+
+msgid "Code"
+msgstr ""
+
+msgid "Tools"
+msgstr ""
+
+msgid "Import/Export"
+msgstr ""
+
+msgid "Number of videos per page"
+msgstr ""
+
+msgid "videos / page"
+msgstr ""
+
+msgid "Number of videos per row"
+msgstr ""
+
+msgid "videos / row"
+msgstr ""
+
+msgid "Enable thumbnails rotation"
+msgstr ""
+
+msgid "Enable thumbnails rotation to see a preview of the video on mouseover."
+msgstr ""
+
+msgid "Enable views system"
+msgstr ""
+
+msgid "Display number of views on thumbnails, under the video player and add a "Most viewed videos" filter."
+msgstr ""
+
+msgid "Enable duration system"
+msgstr ""
+
+msgid "Display duration on thumbnails, and add a "Longest videos" filter."
+msgstr ""
+
+msgid "Enable rating system"
+msgstr ""
+
+msgid "Display a rating bar with percentage under thumbnails, a rating system under the video player, and add a "Popular videos" filter."
+msgstr ""
+
+msgid "Enable breadcrumbs"
+msgstr ""
+
+msgid "Display a breadcrumb at the top of each pages of your site to allow your visitors to navigate more easily."
+msgstr ""
+
+msgid "Enable comments"
+msgstr ""
+
+msgid "Display a comments section in your single video pages."
+msgstr ""
+
+msgid "Main color"
+msgstr ""
+
+msgid "Custom background"
+msgstr ""
+
+msgid "Background settings"
+msgstr ""
+
+msgid "Image"
+msgstr ""
+
+msgid "Color"
+msgstr ""
+
+msgid "Repeat"
+msgstr ""
+
+msgid "Attachment"
+msgstr ""
+
+msgid "Use logo image"
+msgstr ""
+
+msgid "Icon logo settings"
+msgstr ""
+
+msgid "Icon logo"
+msgstr ""
+
+msgid "Text logo settings"
+msgstr ""
+
+msgid "Text logo"
+msgstr ""
+
+msgid "Font family"
+msgstr ""
+
+msgid "Font size"
+msgstr ""
+
+msgid "Image logo file"
+msgstr ""
+
+msgid "Image logo"
+msgstr ""
+
+msgid "Image logo settings"
+msgstr ""
+
+msgid "Max width"
+msgstr ""
+
+msgid "Max height"
+msgstr ""
+
+msgid "Margin top"
+msgstr ""
+
+msgid "Margin left"
+msgstr ""
+
+msgid "Show text slogan"
+msgstr ""
+
+msgid "Text slogan"
+msgstr ""
+
+msgid "Favicon"
+msgstr ""
+
+msgid "Show social profiles"
+msgstr ""
+
+msgid "Your social profiles"
+msgstr ""
+
+msgid "Show search bar"
+msgstr ""
+
+msgid "Video page"
+msgstr ""
+
+msgid "Show carousel of videos"
+msgstr ""
+
+msgid "Will display featured videos."
+msgstr ""
+
+msgid "Carousel settings"
+msgstr ""
+
+msgid "Videos amount"
+msgstr ""
+
+msgid "The number of videos displayed in the carousel"
+msgstr ""
+
+msgid "Show video title"
+msgstr ""
+
+msgid "Video title will be displayed as caption over the thumbnail."
+msgstr ""
+
+msgid "Autoplay"
+msgstr ""
+
+msgid "Autoplay will pause when mouse hovers over carousel."
+msgstr ""
+
+msgid "Show sidebar"
+msgstr ""
+
+msgid "<a href="%s">Click here</a> to manage your sidebar with widgets."
+msgstr ""
+
+msgid "Show"
+msgstr ""
+
+msgid "Video blocks"
+msgstr ""
+
+msgid "<a href="%s">Click here</a> to use video blocks instead of a videos listing."
+msgstr ""
+
+msgid "Video player"
+msgstr ""
+
+msgid "Works only with %s video player."
+msgstr ""
+
+msgid "Logo watermark"
+msgstr ""
+
+msgid "Display your logo inside the video player."
+msgstr ""
+
+msgid "Logo watermark settings"
+msgstr ""
+
+msgid "Image logo watermark"
+msgstr ""
+
+msgid "If empty, your main logo image will be used by default."
+msgstr ""
+
+msgid "Logo position"
+msgstr ""
+
+msgid "Choose the position of your logo inside the video player."
+msgstr ""
+
+msgid "Grayscale"
+msgstr ""
+
+msgid "Display tracking button"
+msgstr ""
+
+msgid "Display a button with your tracking link under the video player."
+msgstr ""
+
+msgid "Tracking button settings"
+msgstr ""
+
+msgid "Icon button"
+msgstr ""
+
+msgid "Tracking button text"
+msgstr ""
+
+msgid "Change the text of the tracking button."
+msgstr ""
+
+msgid "Video about"
+msgstr ""
+
+msgid "Show description"
+msgstr ""
+
+msgid "Show author"
+msgstr ""
+
+msgid "Show publish date"
+msgstr ""
+
+msgid "Show actors"
+msgstr ""
+
+msgid "Show categories"
+msgstr ""
+
+msgid "Show tags"
+msgstr ""
+
+msgid "Show more settings"
+msgstr ""
+
+msgid "Truncate description"
+msgstr ""
+
+msgid "Display a show more link under the description."
+msgstr ""
+
+msgid "Video share"
+msgstr ""
+
+msgid "Display a "Share" tab with social networks sharing buttons."
+msgstr ""
+
+msgid "Video share settings"
+msgstr ""
+
+msgid "Sidebar settings"
+msgstr ""
+
+msgid "Sidebar position"
+msgstr ""
+
+msgid "Left"
+msgstr ""
+
+msgid "Right"
+msgstr ""
+
+msgid "Footer columns"
+msgstr ""
+
+msgid "<a href="%s">Click here</a> to manage your footer with widgets."
+msgstr ""
+
+msgid "column"
+msgstr ""
+
+msgid "columns"
+msgstr ""
+
+msgid "Copyright bar"
+msgstr ""
+
+msgid "Turn on to display the copyright bar."
+msgstr ""
+
+msgid "Copyright settings"
+msgstr ""
+
+msgid "Copyright text"
+msgstr ""
+
+msgid "All rights reserved. Powered by"
+msgstr ""
+
+msgid "Enter the text that displays in the copyright bar. HTML markup can be used."
+msgstr ""
+
+msgid "Enable membership"
+msgstr ""
+
+msgid "Enable membership system with login/register feature, user profile, video submit, etc."
+msgstr ""
+
+msgid "Allow users to submit videos like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Allow users to modify their profile like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Enable video submission"
+msgstr ""
+
+msgid "Video submit settings"
+msgstr ""
+
+msgid "Title required"
+msgstr ""
+
+msgid "Description required"
+msgstr ""
+
+msgid "Video URL required"
+msgstr ""
+
+msgid "Embed required"
+msgstr ""
+
+msgid "Thumbnail URL required"
+msgstr ""
+
+msgid "Duration required"
+msgstr ""
+
+msgid "Membership links"
+msgstr ""
+
+msgid "Display "Submit a Video" link"
+msgstr ""
+
+msgid "Display "My Profile" link"
+msgstr ""
+
+msgid "Display "My Channel" link"
+msgstr ""
+
+msgid "Enable reCaptcha"
+msgstr ""
+
+msgid "Enable a Google reCaptcha security code on registration and submit video page. You can get your reCAPTCHA keys here: <a href="%s" target="_blank">Google reCaptcha Keys</a>"
+msgstr ""
+
+msgid "reCaptcha settings"
+msgstr ""
+
+msgid "Site key"
+msgstr ""
+
+msgid "Secret key"
+msgstr ""
+
+msgid "Advertising tabs"
+msgstr ""
+
+msgid "Desktop"
+msgstr ""
+
+msgid "Mobile"
+msgstr ""
+
+msgid "Header ad zone"
+msgstr ""
+
+msgid "Sidebar ad zone"
+msgstr ""
+
+msgid "Inside video player ad zone 1"
+msgstr ""
+
+msgid "Inside video player ad zone 2"
+msgstr ""
+
+msgid "Under video player ad zone"
+msgstr ""
+
+msgid "Footer ad zone"
+msgstr ""
+
+msgid "Code tabs"
+msgstr ""
+
+msgid "Paste here your Google Analytics following code."
+msgstr ""
+
+msgid "Other scripts"
+msgstr ""
+
+msgid "Paste here your other script codes (eg popup script)."
+msgstr ""
+
+msgid "Paste here your meta codes (for example to verify your domain from a third party like Google Suite, etc.)"
+msgstr ""
+
+msgid "Paste here CSS to customize the theme."
+msgstr ""
+
+msgid "Dummy content"
+msgstr ""
+
+msgid "Import Mainstream videos"
+msgstr ""
+
+msgid "It will create 40 new video <a href="%s">posts</a> in your admin."
+msgstr ""
+
+msgid "Import Adult videos"
+msgstr ""
+
+msgid "Pages"
+msgstr ""
+
+msgid "Create Categories page"
+msgstr ""
+
+msgid "Display illustrated categories like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Create Tags page"
+msgstr ""
+
+msgid "Display a tags list like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Create Actors page"
+msgstr ""
+
+msgid "Display an actors list like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Menu"
+msgstr ""
+
+msgid "Create Menu"
+msgstr ""
+
+msgid "Create a <a href="%s" target="_blank">menu</a> like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Widgets"
+msgstr ""
+
+msgid "Create <a href="%s" target="_blank">widgets</a> like on <a href="%s" target="_blank">%s</a> demo."
+msgstr ""
+
+msgid "Data is being imported please be patient..."
+msgstr ""
+
+msgid "Video submit page created."
+msgstr ""
+
+msgid "Have fun!"
+msgstr ""
+
+msgid "Profile page created."
+msgstr ""
+
+msgid "Categories page created."
+msgstr ""
+
+msgid "Tags page created."
+msgstr ""
+
+msgid "Actors page created."
+msgstr ""
+
+msgid "Menu created."
+msgstr ""
+
+msgid "Widgets created."
+msgstr ""
+
+msgid "Actor"
+msgstr ""
+
+msgid "Actors"
+msgstr ""
+
+msgid "Search Actors"
+msgstr ""
+
+msgid "Popular Actors"
+msgstr ""
+
+msgid "All Actors"
+msgstr ""
+
+msgid "Edit Actor"
+msgstr ""
+
+msgid "Update Actor"
+msgstr ""
+
+msgid "Add New Actor"
+msgstr ""
+
+msgid "New Actor Name"
+msgstr ""
+
+msgid "Separate Actors with commas"
+msgstr ""
+
+msgid "Add or remove Actors"
+msgstr ""
+
+msgid "Choose from the most used Actors"
+msgstr ""

@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package ozzb2b.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ozzy1986/ozzb2b/apps/events/gen/ozzb2b/events/v1;eventsv1";
+
+message Event {
+  string event_id = 1;
+  string event_type = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+  string user_id = 4;
+  string session_id = 5;
+
+  oneof payload {
+    PageView page_view = 10;
+    SearchPerformed search = 11;
+    ProfileViewed profile_view = 12;
+    ChatMessageSent chat_message = 13;
+  }
+}
+
+message PageView {
+  string path = 1;
+  string referrer = 2;
+  string user_agent = 3;
+  string ip = 4;
+}
+
+message SearchPerformed {
+  string query = 1;
+  repeated string category_slugs = 2;
+  repeated string country_codes = 3;
+  int32 result_count = 4;
+  int32 latency_ms = 5;
+}
+
+message ProfileViewed {
+  string provider_id = 1;
+  string category_slug = 2;
+}
+
+message ChatMessageSent {
+  string conversation_id = 1;
+  int32 body_length = 2;
+}

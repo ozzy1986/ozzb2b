@@ -1,0 +1,105 @@
+name: ozzb2b-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ozzb2b-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ozzb2b
+      POSTGRES_USER: ozzb2b
+      POSTGRES_PASSWORD: ozzb2b_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./infra/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ozzb2b -d ozzb2b"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: ozzb2b-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./infra/data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: ozzb2b-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ozzb2b_dev_master_key_change_me
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - ./infra/data/meilisearch:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: ozzb2b-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: ozzb2b-api
+    restart: unless-stopped
+    environment:
+      OZZB2B_ENV: development
+      OZZB2B_DATABASE_URL: postgresql+asyncpg://ozzb2b:ozzb2b_dev_password@postgres:5432/ozzb2b
+      OZZB2B_REDIS_URL: redis://redis:6379/0
+      OZZB2B_MEILISEARCH_URL: http://meilisearch:7700
+      OZZB2B_MEILISEARCH_KEY: ozzb2b_dev_master_key_change_me
+      OZZB2B_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').getcode()==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: ozzb2b-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      OZZB2B_API_URL: http://api:8000
+      NEXT_PUBLIC_OZZB2B_API_URL: http://localhost:8001
+    ports:
+      - "3001:3000"
+    depends_on:
+      api:
+        condition: service_healthy

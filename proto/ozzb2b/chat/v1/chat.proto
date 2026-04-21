@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package ozzb2b.chat.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ozzy1986/ozzb2b/apps/chat/gen/ozzb2b/chat/v1;chatv1";
+
+service ChatService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  rpc SubscribeMessages(SubscribeMessagesRequest) returns (stream Message);
+}
+
+message Message {
+  string id = 1;
+  string conversation_id = 2;
+  string sender_user_id = 3;
+  string body = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message SendMessageRequest {
+  string sender_user_id = 1;
+  string recipient_user_id = 2;
+  string body = 3;
+  string conversation_id = 4;
+}
+
+message SendMessageResponse {
+  Message message = 1;
+}
+
+message ListConversationsRequest {
+  string user_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message Conversation {
+  string id = 1;
+  repeated string participant_user_ids = 2;
+  Message last_message = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  int32 unread_count = 5;
+}
+
+message ListConversationsResponse {
+  repeated Conversation conversations = 1;
+  string next_page_token = 2;
+}
+
+message ListMessagesRequest {
+  string conversation_id = 1;
+  string user_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListMessagesResponse {
+  repeated Message messages = 1;
+  string next_page_token = 2;
+}
+
+message SubscribeMessagesRequest {
+  string user_id = 1;
+}

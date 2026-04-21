@@ -1,0 +1,423 @@
+# Copyright (C) 2019 WP-Script
+# This file is distributed under the same license as the WP-Script Core plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: WP-Script Core 2.0.2\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-script-core\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2019-11-27T10:25:47+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.3.0\n"
+"X-Domain: wpscore_lang\n"
+
+#. Plugin Name of the plugin
+msgid "WP-Script Core"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+msgid "https://www.wp-script.com"
+msgstr ""
+
+#. Description of the plugin
+msgid "WP-Script.com core plugin"
+msgstr ""
+
+#. Author of the plugin
+msgid "WP-Script"
+msgstr ""
+
+#: admin/class/class-wpscore-api.php:107
+#: admin/class/class-wpscore-api.php:129
+msgid "Params must be an array"
+msgstr ""
+
+#: admin/class/class-wpscore-log.php:89
+msgid "Log file error"
+msgstr ""
+
+#: admin/hooks/hooks.php:18
+msgid "Thumb"
+msgstr ""
+
+#: admin/hooks/hooks.php:19
+msgid "Partner"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:28
+msgid "Loading Core"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:35
+msgid "Wordfence firewall is enabled"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:36
+msgid "Wordfence Firewall mode is set to \"enabled\", which is amazing to protect your site."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:37
+msgid "But this mode can prevent WP-Script plugins to work properly because of false positive."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:37
+msgid "Learn more"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:38
+msgid "Enable Learning Mode"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:46
+msgid "PHP > 5.3.0 is required"
+msgstr ""
+
+#. translators: %s is the current too old installed PHP version
+#: admin/pages/page-dashboard.php:49
+msgctxt "[PHP version] is required..."
+msgid "is required to use WP-Script products. Your PHP version (%s) is too old. Please contact your hoster to update it"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:59
+msgid "Loading Data"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:85
+msgid "Activation required"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:87
+msgid "Activation Successful"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:87
+#: config.php:97
+#: config.php:125
+msgid "Reloading"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:94
+msgid "Paste your WP-Script License Key here"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:98
+msgid "Activating License"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:101
+msgid "Activate my WP-Script License"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:108
+msgid "Go to your WP-Script account to get your license key"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:110
+msgid "You don't have a WP-Script license yet?"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:122
+msgid "Creating account"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:125
+msgid "Create my WP-Script Account"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:132
+msgid "You're going to create your unique WP-Script account"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:132
+msgid "You will receive your login details to this email address"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:132
+msgid "No spam"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:132
+msgid "More informations"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:146
+msgid "Site connected with WP-Script Gold"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:148
+msgid "Your WP-Script License Key"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:164
+msgid "WP-Script Gold"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:165
+msgid "About WP-Script Gold"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:198
+#: admin/pages/page-dashboard.php:240
+#: admin/pages/page-dashboard.php:290
+msgid "Close"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:199
+msgid "How WP-Script products connection works?"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:203
+msgid "The button bellow each product will automatically change depending on which step you are."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:207
+msgid "Purchase any product you need for 1 / 5 / ∞ sites"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:213
+msgid "Connect the purchased product"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:219
+msgid "Install the purchased product"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:225
+msgid "Activate the purchased product"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:241
+msgid "Requirements for"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:245
+msgid "There is no requirement to use this product. This product will work properly."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:248
+msgid "These following PHP elements must be installed on your server to use this product"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:251
+msgid "Name"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:252
+#: admin/pages/page-logs.php:57
+msgid "Type"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:253
+#: config.php:104
+msgid "Installed"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:264
+msgid "yes"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:267
+msgid "no"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:273
+msgid "All required PHP elements are installed on your server. This product will work properly."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:276
+msgid "Some PHP elements are not installed on your server. This product may not work properly. Please contact your web hoster."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:291
+msgid "An error occured while installing or updating"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:297
+msgid "Your server configuration prevents the product to be installed automatically."
+msgstr ""
+
+#: admin/pages/page-dashboard.php:301
+msgid "Show more infos"
+msgstr ""
+
+#: admin/pages/page-dashboard.php:306
+msgid "Hide more infos"
+msgstr ""
+
+#: admin/pages/page-logs.php:42
+msgid "No log has been written yet"
+msgstr ""
+
+#: admin/pages/page-logs.php:47
+msgid "Copy Logs to clipboard"
+msgstr ""
+
+#: admin/pages/page-logs.php:48
+msgid "Delete Logs"
+msgstr ""
+
+#: admin/pages/page-logs.php:54
+msgid "Date"
+msgstr ""
+
+#: admin/pages/page-logs.php:59
+#: admin/pages/page-logs.php:71
+#: config.php:101
+msgid "All"
+msgstr ""
+
+#: admin/pages/page-logs.php:60
+msgid "Success"
+msgstr ""
+
+#: admin/pages/page-logs.php:61
+msgid "Notice"
+msgstr ""
+
+#: admin/pages/page-logs.php:62
+msgid "Warning"
+msgstr ""
+
+#: admin/pages/page-logs.php:63
+msgid "Error"
+msgstr ""
+
+#: admin/pages/page-logs.php:69
+msgid "Product"
+msgstr ""
+
+#: admin/pages/page-logs.php:77
+msgid "Message"
+msgstr ""
+
+#: admin/pages/page-logs.php:82
+msgid "Location"
+msgstr ""
+
+#: config.php:96
+msgid "Loading"
+msgstr ""
+
+#: config.php:99
+msgid "Invalid License Key"
+msgstr ""
+
+#: config.php:102
+#: config.php:111
+msgid "Connected"
+msgstr ""
+
+#: config.php:103
+#: config.php:112
+msgid "Not connected"
+msgstr ""
+
+#: config.php:105
+#: config.php:108
+msgid "Not installed"
+msgstr ""
+
+#: config.php:107
+msgid "installed"
+msgstr ""
+
+#: config.php:109
+msgid "Coming soon"
+msgstr ""
+
+#: config.php:110
+msgid "Req."
+msgstr ""
+
+#: config.php:114
+msgid "Buy now"
+msgstr ""
+
+#: config.php:115
+msgid "Connect"
+msgstr ""
+
+#: config.php:116
+msgid "Install"
+msgstr ""
+
+#: config.php:117
+msgid "Installing"
+msgstr ""
+
+#: config.php:118
+msgid "Update to"
+msgstr ""
+
+#: config.php:119
+msgid "Updating to"
+msgstr ""
+
+#: config.php:120
+msgid "Activate"
+msgstr ""
+
+#: config.php:121
+msgid "Activating"
+msgstr ""
+
+#: config.php:122
+msgid "Deactivate"
+msgstr ""
+
+#: config.php:123
+msgid "Active theme"
+msgstr ""
+
+#: config.php:124
+msgid "Deactivating"
+msgstr ""
+
+#: config.php:127
+msgid "Your WP-Script Gold subscription has expired. Reactivate it and get instant access to all existing and future WP-Script products"
+msgstr ""
+
+#: config.php:128
+msgid "Join WP-Script Gold and get access to all existing and future WP-Script products"
+msgstr ""
+
+#: config.php:129
+msgid "Connect this site with your WP-Script Gold subscription and get instant access to all existing and future WP-Script products"
+msgstr ""
+
+#: config.php:130
+msgid "You've reached the limit of sites you can connect with your current WP-Script Gold plan"
+msgstr ""
+
+#: config.php:131
+msgid "Join WP-Script Gold"
+msgstr ""
+
+#: config.php:132
+msgid "Reactivate WP-Script Gold"
+msgstr ""
+
+#: config.php:133
+msgid "Upgrade WP-Script Gold plan"
+msgstr ""
+
+#: config.php:134
+msgid "Contact us"
+msgstr ""
+
+#: wp-script-core.php:909
+#: wp-script-core.php:1056
+msgid "Help"
+msgstr ""
+
+#: wp-script-core.php:1046
+msgid "Plugins"
+msgstr ""
+
+#: wp-script-core.php:1077
+msgid "Thank you for using"
+msgstr ""

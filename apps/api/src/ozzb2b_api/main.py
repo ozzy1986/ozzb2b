@@ -1,0 +1,22 @@
+"""Module entry point for `python -m ozzb2b_api`."""
+
+from __future__ import annotations
+
+import uvicorn
+
+from ozzb2b_api.config import get_settings
+
+
+def run() -> None:
+    settings = get_settings()
+    uvicorn.run(
+        "ozzb2b_api.app:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=not settings.is_production,
+        log_level=settings.log_level.lower(),
+    )
+
+
+if __name__ == "__main__":
+    run()

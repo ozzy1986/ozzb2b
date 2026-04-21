@@ -1,0 +1,60 @@
+name: ozzb2b
+
+# Production compose for the single-VPS deployment.
+#
+# Uses the host's existing Postgres and Redis (accessed via host.docker.internal
+# or 172.17.0.1 on Linux hosts) to stay within the VPS memory budget.
+# Meilisearch runs in-stack because it is small and stateless apart from its index volume.
+
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: ozzb2b-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${OZZB2B_MEILISEARCH_KEY}
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "127.0.0.1:7700:7700"
+    volumes:
+      - /var/www/ozzb2b.com/data/meilisearch:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: ghcr.io/ozzy1986/ozzb2b-api:latest
+    container_name: ozzb2b-api
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      OZZB2B_ENV: production
+    ports:
+      - "127.0.0.1:8001:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').getcode()==200 else 1)"]
+      interval: 15s
+      timeout: 3s
+      retries: 6
+
+  web:
+    image: ghcr.io/ozzy1986/ozzb2b-web:latest
+    container_name: ozzb2b-web
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      NODE_ENV: production
+      OZZB2B_API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      api:
+        condition: service_healthy

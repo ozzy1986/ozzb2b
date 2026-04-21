@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package ozzb2b.matcher.v1;
+
+option go_package = "github.com/ozzy1986/ozzb2b/apps/matcher/gen/ozzb2b/matcher/v1;matcherv1";
+
+service MatcherService {
+  rpc Rank(RankRequest) returns (RankResponse);
+}
+
+message RankRequest {
+  string query = 1;
+  repeated string category_slugs = 2;
+  repeated string country_codes = 3;
+  repeated string city_slugs = 4;
+  repeated string legal_form_codes = 5;
+  int32 limit = 6;
+  int32 offset = 7;
+}
+
+message ScoredProvider {
+  string provider_id = 1;
+  float score = 2;
+}
+
+message RankResponse {
+  repeated ScoredProvider providers = 1;
+  int32 total_estimate = 2;
+}
