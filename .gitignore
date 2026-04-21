@@ -1,0 +1,42 @@
+# ---- Secrets & local config ----
+wp-config.php
+.env
+.env.*
+*.local
+
+# ---- WordPress runtime data ----
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backup*/
+wp-content/blogs.dir/
+wp-content/advanced-cache.php
+wp-content/wp-cache-config.php
+wp-content/object-cache.php
+sitemap.xml
+sitemap.xml.gz
+
+# ---- Logs ----
+*.log
+debug.log
+error_log
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+
+# ---- Dependencies / build artifacts ----
+node_modules/
+vendor/
+*.zip
+*.tar.gz
+
+# ---- Test / scratch files at root ----
+/test.php
+
+credentials.json

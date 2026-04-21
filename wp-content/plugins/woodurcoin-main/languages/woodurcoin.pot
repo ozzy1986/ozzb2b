@@ -1,0 +1,147 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Woodurcoin \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-11-27 08:35+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: \n"
+"Language: \n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.5.5; wp-5.8.2\n"
+"X-Domain: woodurcoin "
+
+#: includes/class-woodurcoin.php:156
+msgid "Accept DURCOIN if the order is virtual"
+msgstr ""
+
+#: includes/class-woodurcoin.php:155
+msgid "Accept for virtual orders"
+msgstr ""
+
+#: includes/class-woodurcoin.php:95
+msgid "Add API Key"
+msgstr ""
+
+#: includes/class-woodurcoin.php:96
+msgid "Add Widget ID"
+msgstr ""
+
+#: includes/class-woodurcoin.php:141
+msgid "Asset description"
+msgstr ""
+
+#: includes/class-woodurcoin.php:144
+msgid "Asset full name."
+msgstr ""
+
+#: includes/class-woodurcoin.php:123
+msgid "Description"
+msgstr ""
+
+#: includes/class-woodurcoin.php:130
+msgid "Destination address"
+msgstr ""
+
+#: includes/class-woodurcoin.php:118
+msgid ""
+"Durcoin Payment method description that the customer will see on your "
+"checkout."
+msgstr ""
+
+#: includes/class-woodurcoin.php:125
+msgid ""
+"Durcoin Payment method description that the customer will see on your "
+"website."
+msgstr ""
+
+#: includes/class-woodurcoin.php:94 includes/class-woodurcoin.php:119
+msgid "Durcoin Payments"
+msgstr ""
+
+#: includes/class-woodurcoin.php:126 includes/class-woodurcoin.php:151
+msgid "Durcoin Payments before delivery."
+msgstr ""
+
+#: includes/class-woodurcoin.php:64
+msgid "Durcoin token"
+msgstr ""
+
+#: includes/class-woodurcoin.php:110
+msgid "Enable Durcoin Payments"
+msgstr ""
+
+#: includes/class-woodurcoin.php:109
+msgid "Enable/Disable"
+msgstr ""
+
+#. Author of the plugin
+msgid "granvik"
+msgstr ""
+
+#: includes/class-woodurcoin.php:97
+msgid "Have your customers pay with Durcoin Payments."
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://aradm.ru/"
+msgstr ""
+
+#. URI of the plugin
+msgid "https://github.com/granvik/woodurcoin/"
+msgstr ""
+
+#: includes/class-woodurcoin.php:161
+msgid "Icon"
+msgstr ""
+
+#: includes/class-woodurcoin.php:164
+msgid "Icon for checkout gateway view."
+msgstr ""
+
+#: includes/class-woodurcoin.php:150
+msgid "Instructions that will be added to the thank you page."
+msgstr ""
+
+#. Description of the plugin
+msgid "Integration Durcoin payments into Woocommerce."
+msgstr ""
+
+#: includes/class-woodurcoin.php:276
+msgid "Pay on Waves.Exchange"
+msgstr ""
+
+#: includes/class-woodurcoin.php:168
+msgid "QR code"
+msgstr ""
+
+#: includes/class-woodurcoin.php:169
+msgid "Show a QR code"
+msgstr ""
+
+#: includes/class-woodurcoin.php:171
+msgid "Show a QR code with a link to the payment page on the Durcoin.Exchange."
+msgstr ""
+
+#: includes/class-woodurcoin.php:133
+msgid "This addresses will be used for receiving funds."
+msgstr ""
+
+#: woodurcoin.php:30
+msgid ""
+"This plugin requires <a href=\"https://www.php.net/manual/en/book.gmp.php\" "
+"target=\"_blank\">GMP PHP extension</a>."
+msgstr ""
+
+#: includes/class-woodurcoin.php:116
+msgid "Title"
+msgstr ""
+
+#. Name of the plugin
+msgid "Woodurcoin"
+msgstr ""

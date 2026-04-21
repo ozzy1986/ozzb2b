@@ -1,0 +1,5 @@
+{
+    "require": {
+        "deemru/abcode": "^1.0"
+    }
+}

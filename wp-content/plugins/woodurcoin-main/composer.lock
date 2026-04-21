@@ -1,0 +1,71 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "73d51d9ec7740113631573733bbff8af",
+    "packages": [
+        {
+            "name": "deemru/abcode",
+            "version": "1.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/deemru/ABCode.git",
+                "reference": "abb047be27817821312f00d5d063ed57d153c01c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/deemru/ABCode/zipball/abb047be27817821312f00d5d063ed57d153c01c",
+                "reference": "abb047be27817821312f00d5d063ed57d153c01c",
+                "shasum": ""
+            },
+            "require": {
+                "ext-gmp": "*",
+                "php": ">=5.4"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "deemru\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dmitrii Pichulin",
+                    "email": "deem@deem.ru"
+                }
+            ],
+            "description": "ABC (alphabet) encode/decode",
+            "homepage": "https://github.com/deemru/ABCode",
+            "keywords": [
+                "base26",
+                "base36",
+                "base52",
+                "base58",
+                "base62",
+                "baseN",
+                "baseNN",
+                "baseNNN"
+            ],
+            "support": {
+                "issues": "https://github.com/deemru/ABCode/issues",
+                "source": "https://github.com/deemru/ABCode/tree/1.0.3"
+            },
+            "time": "2020-04-06T21:19:17+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.0.0"
+}

@@ -1,0 +1,177 @@
+.containerTarot {
+    background-size: 100% auto;
+    background-repeat: no-repeat;
+    margin: 20px 0 0px;
+    padding: 10px 10px 10px 10px;
+	font-size: 24px;
+	color: #fff;
+    background-position: left 35%;
+	min-height: 300px;
+	width: 100%;
+	margin-left: auto;
+	margin-right: auto;
+}
+/*
+@media screen and (max-width: 420px) {
+	.containerTarot {
+		height: 380px;
+	}
+}
+*/
+.tarotGame {
+    width: 90%;
+	height: 90%;
+    position: relative;
+}
+
+
+#tarot_deck {
+	height: 32%;
+}
+.card, .card_empty {
+    position: relative;
+}
+.card {
+	display: block;
+	position: relative;
+	float: left;
+    width: 18%;
+	margin-right: -14%;
+    height: 100%;
+    background-size: 100% 100%;
+    background-position-y: center;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    -webkit-box-shadow: -4px 3px 5px 0 rgba(0, 0, 0, .3);
+    -moz-box-shadow: -4px 3px 5px 0 rgba(0, 0, 0, .3);
+    box-shadow: -4px 3px 5px 0 rgba(0, 0, 0, .3);
+    transform-origin: 50% 200%;
+    -webkit-transform-origin: 50% 200%;
+    -moz-transform-origin: 50% 200%;
+    -o-transform-origin: 50% 200%;
+    -ms-transform-origin: 50% 200%;
+    transition: 50ms ease-out 0s;
+    -moz-transition: 50ms ease-out 0s;
+    -webkit-transition: 50ms ease-out 0s;
+    -o-transition: 50ms ease-out 0s;
+    -ms-transition: 50ms ease-out 0s
+}
+/*
+@media screen and (max-width: 420px) {
+	.card {
+		width: 12%;
+		height: 34%;
+	}
+}
+*/
+.result_cards {
+	height: 32%;
+}
+.card_empty {
+	display: inline-block;
+    background-size: 100% auto;
+    background-repeat: no-repeat;
+	height: 100%;
+	width: 16.5%;
+    z-index: 0;
+    background-color: transparent;
+    border: 1px dashed #d4c371;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+}
+@media screen and (max-width: 420px) {
+	.card_empty {
+		/*top: 68%;*/
+	}
+}
+.card.hovered {
+    -webkit-box-shadow: 0 0 5px 0 rgba(0, 0, 0, .9);
+    -moz-box-shadow: 0 0 5px 0 rgba(0, 0, 0, .9);
+    box-shadow: 0 0 5px 0 rgba(0, 0, 0, .9);
+    cursor: pointer
+}
+
+.above, .below, .below_after {
+	padding: 10px 0px;
+	color: white;
+}
+.below {
+	position: relative;
+	left: 0px;
+}
+.below_after {
+	position: relative;
+	left: 0px;
+}
+
+
+#tarot_options table {
+	background-color: #d1ece2;
+    border-radius: 6px;
+}
+#tarot_options table tr:nth-child(even) {
+	background-color: #dbefed;
+}
+#tarot_options table tr:nth-child(odd) {
+	background-color: #d4e3e8;
+}
+#tarot_options table tr:hover {
+	background-color: #daf5ec;
+}
+#tarot_options table tr td:hover {
+	background-color: #e4f7e4;
+}
+
+
+#expand_deck {
+	margin: 4px;
+}
+
+#upload_cards {
+	border: 1px solid #c5b8fa;
+    margin: 2px 0px;
+    border-radius: 6px;
+    background-color: #eefcda;
+}
+.tarot_card_image_preview {
+	display: inline-block;
+	padding: 8px;
+}
+.tarot_card_image_preview:hover {
+	background-color: #def0ef;
+}
+.tarot_card_image_preview.checked {
+	background-color: #D1E3E2;
+}
+
+#upload-button {
+	display: inline;
+	margin: 8px;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.tarot_card_image_preview label em{
+	font-size: 22px;
+	vertical-align: middle;
+	padding-right: 4px;
+	color: #26268d;
+}
+input.check_row {
+	margin: 4px 12px 0 4px;
+	transform: scale(1.7);
+}
+#check_all {
+	transform: scale(1.7);
+	margin: 14.5px;
+}
+#checked_action {
+	display: inline;
+	font-size: 20px;
+	vertical-align: middle;
+}
+#checked_action a {
+	text-decoration: none;
+}
