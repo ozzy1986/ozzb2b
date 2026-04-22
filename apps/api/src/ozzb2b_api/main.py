@@ -9,9 +9,10 @@ from ozzb2b_api.config import get_settings
 
 def run() -> None:
     settings = get_settings()
+    # Listen on all interfaces inside the container so the host / reverse proxy can reach uvicorn.
     uvicorn.run(
         "ozzb2b_api.app:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # noqa: S104
         port=8000,
         reload=not settings.is_production,
         log_level=settings.log_level.lower(),
