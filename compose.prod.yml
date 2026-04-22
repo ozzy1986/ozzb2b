@@ -15,7 +15,7 @@ services:
       - .env.prod
     environment:
       MEILI_ENV: production
-      MEILI_MASTER_KEY: ${OZZB2B_MEILISEARCH_KEY:?set OZZB2B_MEILISEARCH_KEY in .env.prod}
+      # MEILI_MASTER_KEY comes from `.env.prod` (`OZZB2B_MEILISEARCH_KEY` mapping if needed upstream).
       MEILI_NO_ANALYTICS: "true"
     ports:
       - "127.0.0.1:7700:7700"
