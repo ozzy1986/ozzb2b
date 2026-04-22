@@ -110,6 +110,7 @@ CATEGORIES: tuple[CategorySeed, ...] = (
 
 
 COUNTRIES: tuple[tuple[str, str], ...] = (
+    ("RU", "Russia"),
     ("PL", "Poland"),
     ("DE", "Germany"),
     ("UA", "Ukraine"),
@@ -134,6 +135,11 @@ LEGAL_FORMS: tuple[LegalFormSeed, ...] = (
     # Universal
     LegalFormSeed(None, "UNK", "Unknown / other"),
     LegalFormSeed(None, "SELF_EMPLOYED", "Self-employed"),
+    # Russia
+    LegalFormSeed("RU", "OOO", "ООО (LLC)"),
+    LegalFormSeed("RU", "AO", "АО (joint-stock company)"),
+    LegalFormSeed("RU", "PAO", "ПАО (public joint-stock company)"),
+    LegalFormSeed("RU", "IP", "ИП (individual entrepreneur)"),
     # Poland
     LegalFormSeed("PL", "SP_Z_O_O", "sp. z o.o."),
     LegalFormSeed("PL", "SA", "S.A."),
@@ -163,6 +169,20 @@ class CitySeed:
 
 
 CITIES: tuple[CitySeed, ...] = (
+    CitySeed("RU", "Moscow"),
+    CitySeed("RU", "Saint Petersburg"),
+    CitySeed("RU", "Novosibirsk"),
+    CitySeed("RU", "Yekaterinburg"),
+    CitySeed("RU", "Kazan"),
+    CitySeed("RU", "Nizhny Novgorod"),
+    CitySeed("RU", "Samara"),
+    CitySeed("RU", "Ulyanovsk"),
+    CitySeed("RU", "Voronezh"),
+    CitySeed("RU", "Omsk"),
+    CitySeed("RU", "Kirov"),
+    CitySeed("RU", "Perm"),
+    CitySeed("RU", "Rostov-on-Don"),
+    CitySeed("RU", "Krasnodar"),
     CitySeed("PL", "Warsaw"),
     CitySeed("PL", "Krakow"),
     CitySeed("PL", "Wroclaw"),

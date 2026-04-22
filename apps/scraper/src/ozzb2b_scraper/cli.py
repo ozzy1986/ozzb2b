@@ -9,11 +9,12 @@ import argparse
 import sys
 
 from ozzb2b_scraper.pipeline import run_spider_sync
-from ozzb2b_scraper.spiders import DemoDirectorySpider
+from ozzb2b_scraper.spiders import DemoDirectorySpider, RuOutsourcingSeedSpider
 
 
 SPIDERS = {
     DemoDirectorySpider.source: DemoDirectorySpider,
+    RuOutsourcingSeedSpider.source: RuOutsourcingSeedSpider,
 }
 
 

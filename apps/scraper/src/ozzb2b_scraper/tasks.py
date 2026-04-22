@@ -7,7 +7,7 @@ import os
 from celery import Celery
 
 from ozzb2b_scraper.pipeline import run_spider_sync
-from ozzb2b_scraper.spiders import DemoDirectorySpider
+from ozzb2b_scraper.spiders import DemoDirectorySpider, RuOutsourcingSeedSpider
 
 REDIS_URL = os.environ.get("OZZB2B_REDIS_URL", "redis://localhost:6380/0")
 
@@ -34,7 +34,10 @@ def health() -> dict[str, str]:
 @app.task(name="ozzb2b.scraper.crawl_source", bind=True, default_retry_delay=60, max_retries=3)
 def crawl_source(self, source_slug: str, limit: int | None = None) -> dict[str, int | str]:
     """Run a registered spider by its source slug."""
-    spider_map = {DemoDirectorySpider.source: DemoDirectorySpider()}
+    spider_map = {
+        DemoDirectorySpider.source: DemoDirectorySpider(),
+        RuOutsourcingSeedSpider.source: RuOutsourcingSeedSpider(),
+    }
     spider = spider_map.get(source_slug)
     if spider is None:
         return {"status": "unknown_source", "source_slug": source_slug}
