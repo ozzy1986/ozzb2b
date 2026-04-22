@@ -1,20 +1,41 @@
 import type {
   Category,
   CategoryTreeNode,
+  ChatMessage,
   City,
+  Conversation,
   Country,
   LegalForm,
   ProviderDetail,
   ProviderListResponse,
+  TokenResponse,
+  UserPublic,
+  WsTokenResponse,
 } from './types';
 
-const API_URL =
-  process.env.OZZB2B_API_URL ?? process.env.NEXT_PUBLIC_OZZB2B_API_URL ?? 'http://localhost:8001';
+const SERVER_API_URL = process.env.OZZB2B_API_URL ?? 'http://localhost:8001';
+const PUBLIC_API_URL =
+  process.env.NEXT_PUBLIC_OZZB2B_API_URL ?? SERVER_API_URL;
+
+function apiUrl(): string {
+  return typeof window === 'undefined' ? SERVER_API_URL : PUBLIC_API_URL;
+}
 
 export type ApiHealth = { ok: true; version: string } | { ok: false; error: string };
 
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+  constructor(status: number, detail: string) {
+    super(`API ${status}: ${detail}`);
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${apiUrl()}${path}`, {
+    credentials: 'include',
     ...init,
     cache: 'no-store',
     next: { revalidate: 0 },
@@ -24,7 +45,14 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
-    throw new Error(`${path} failed with ${res.status}`);
+    let detail = `${res.status}`;
+    try {
+      const body = (await res.json()) as { detail?: string };
+      if (body?.detail) detail = body.detail;
+    } catch {
+      // keep status-only detail
+    }
+    throw new ApiError(res.status, detail);
   }
   return (await res.json()) as T;
 }
@@ -107,4 +135,94 @@ export async function searchProviders(params: ProviderListParams & { q: string }
     engine: string;
     items: import('./types').ProviderSummary[];
   }>(`/search${qs}`);
+}
+
+// ---- auth ----
+
+export async function login(email: string, password: string): Promise<TokenResponse> {
+  return fetchJson<TokenResponse>('/auth/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function register(
+  email: string,
+  password: string,
+  displayName: string | null,
+): Promise<TokenResponse> {
+  return fetchJson<TokenResponse>('/auth/register', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, password, display_name: displayName }),
+  });
+}
+
+export async function logout(): Promise<void> {
+  const res = await fetch(`${apiUrl()}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  if (!res.ok && res.status !== 204) {
+    throw new ApiError(res.status, 'logout failed');
+  }
+}
+
+export async function getMe(): Promise<UserPublic | null> {
+  try {
+    return await fetchJson<UserPublic>('/auth/me');
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return null;
+    throw err;
+  }
+}
+
+// ---- chat ----
+
+export async function startConversation(providerSlug: string): Promise<Conversation> {
+  return fetchJson<Conversation>('/chat/conversations', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ provider_slug: providerSlug }),
+  });
+}
+
+export async function listConversations(): Promise<{ total: number; items: Conversation[] }> {
+  return fetchJson('/chat/conversations');
+}
+
+export async function getConversation(id: string): Promise<Conversation> {
+  return fetchJson<Conversation>(`/chat/conversations/${encodeURIComponent(id)}`);
+}
+
+export async function listMessages(
+  conversationId: string,
+  opts?: { limit?: number; before?: string },
+): Promise<{ total: number; items: ChatMessage[] }> {
+  const sp = new URLSearchParams();
+  if (opts?.limit != null) sp.set('limit', String(opts.limit));
+  if (opts?.before) sp.set('before', opts.before);
+  const qs = sp.toString();
+  return fetchJson<{ total: number; items: ChatMessage[] }>(
+    `/chat/conversations/${encodeURIComponent(conversationId)}/messages${qs ? `?${qs}` : ''}`,
+  );
+}
+
+export async function sendMessage(conversationId: string, body: string): Promise<ChatMessage> {
+  return fetchJson<ChatMessage>(
+    `/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ body }),
+    },
+  );
+}
+
+export async function issueWsToken(conversationId: string): Promise<WsTokenResponse> {
+  return fetchJson<WsTokenResponse>(
+    `/chat/conversations/${encodeURIComponent(conversationId)}/ws-token`,
+    { method: 'POST' },
+  );
 }

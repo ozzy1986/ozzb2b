@@ -35,7 +35,10 @@ def _set_auth_cookies(
 ) -> None:
     cfg = get_settings()
     secure = cfg.is_production
-    samesite: Literal["lax"] = "lax"
+    # In production the API (api.ozzb2b.com) is on a different origin from the
+    # browser (ozzb2b.com), so we need SameSite=None + Secure for the cookies
+    # to be sent with cross-site credentialed requests. In dev we use Lax.
+    samesite: Literal["lax", "none"] = "none" if cfg.is_production else "lax"
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,

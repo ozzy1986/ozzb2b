@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getProvider } from '@/lib/api';
 import type { ProviderDetail } from '@/lib/types';
 import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
+import { ContactProviderButton } from '@/components/ContactProviderButton';
 
 export const revalidate = 60;
 
@@ -105,6 +106,14 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
         </div>
 
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="sidebar-card">
+            <h3>Связаться с компанией</h3>
+            <p className="auth-hint" style={{ marginTop: 0 }}>
+              Откройте прямой чат с представителем — без раскрытия ваших контактов.
+            </p>
+            <ContactProviderButton providerSlug={p.slug} />
+          </div>
+
           <div className="sidebar-card">
             <h3>Контакты</h3>
             <dl>

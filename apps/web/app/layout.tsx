@@ -39,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <nav className="site-nav" aria-label="Основная навигация">
               <Link href="/providers">Компании</Link>
               <Link href="/categories">Категории</Link>
+              <Link href="/chat">Чаты</Link>
               <a href="https://github.com/ozzy1986/ozzb2b" target="_blank" rel="noreferrer">
                 GitHub
               </a>

@@ -59,3 +59,48 @@ export type ProviderListResponse = {
   items: ProviderSummary[];
   facets: ProviderFacets | null;
 };
+
+export type UserPublic = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: 'admin' | 'provider_owner' | 'client';
+  created_at: string;
+};
+
+export type TokenResponse = {
+  access_token: string;
+  expires_at: string;
+  user: UserPublic;
+};
+
+export type ConversationPeer = {
+  provider_id: string;
+  provider_slug: string;
+  provider_display_name: string;
+};
+
+export type Conversation = {
+  id: string;
+  user_id: string;
+  provider_id: string;
+  last_message_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  peer: ConversationPeer | null;
+};
+
+export type ChatMessage = {
+  id: string;
+  conversation_id: string;
+  sender_user_id: string | null;
+  body: string;
+  created_at: string;
+};
+
+export type WsTokenResponse = {
+  token: string;
+  expires_at: string;
+  ws_url: string;
+};
