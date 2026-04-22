@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +31,7 @@ class ProviderFilter:
     offset: int = 0
 
 
-def _apply_filter(stmt: Select, f: ProviderFilter) -> Select:
+def _apply_filter(stmt: Select[tuple[Provider]], f: ProviderFilter) -> Select[Any]:
     stmt = stmt.where(Provider.status == ProviderStatus.PUBLISHED)
     if f.country_codes:
         stmt = stmt.join(Provider.country).where(Country.code.in_(f.country_codes))

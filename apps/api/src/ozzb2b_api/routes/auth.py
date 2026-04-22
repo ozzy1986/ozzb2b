@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 
@@ -35,7 +35,7 @@ def _set_auth_cookies(
 ) -> None:
     cfg = get_settings()
     secure = cfg.is_production
-    samesite = "lax"
+    samesite: Literal["lax"] = "lax"
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,

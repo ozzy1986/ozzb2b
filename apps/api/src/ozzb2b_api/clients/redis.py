@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-import redis.asyncio as aioredis
 from redis.asyncio import Redis
 
 from ozzb2b_api.config import get_settings
@@ -14,7 +13,7 @@ from ozzb2b_api.config import get_settings
 def get_redis() -> Redis:
     """Return the application-wide Redis client."""
     settings = get_settings()
-    return aioredis.from_url(
+    return Redis.from_url(
         settings.redis_url,
         encoding="utf-8",
         decode_responses=True,
