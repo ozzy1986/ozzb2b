@@ -46,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Metrics middleware must stay outermost (wrap-closest-to-request) so
     # every downstream error is still counted.
     app.add_middleware(PrometheusMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware, settings=cfg)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     app.include_router(health.router)
     app.include_router(auth.router)

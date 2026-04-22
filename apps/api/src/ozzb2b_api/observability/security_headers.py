@@ -10,26 +10,21 @@ from __future__ import annotations
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.types import ASGIApp
 
 from ozzb2b_api.config import Settings, get_settings
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: ASGIApp, settings: Settings | None = None):
-        super().__init__(app)
-        self._settings = settings or get_settings()
-
     async def dispatch(
         self,
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
         response = await call_next(request)
-        self._apply(response)
+        self._apply(response, settings=get_settings())
         return response
 
-    def _apply(self, response: Response) -> None:
+    def _apply(self, response: Response, *, settings: Settings) -> None:
         headers = response.headers
         headers.setdefault("X-Content-Type-Options", "nosniff")
         headers.setdefault("X-Frame-Options", "DENY")
@@ -39,8 +34,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Content-Security-Policy",
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
         )
-        if self._settings.is_production:
-            max_age = max(0, self._settings.hsts_max_age_seconds)
+        if settings.is_production:
+            max_age = max(0, settings.hsts_max_age_seconds)
             headers.setdefault(
                 "Strict-Transport-Security",
                 f"max-age={max_age}; includeSubDomains",
