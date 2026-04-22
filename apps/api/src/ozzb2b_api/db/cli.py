@@ -4,6 +4,8 @@ Examples:
 
     python -m ozzb2b_api.db.cli migrate
     python -m ozzb2b_api.db.cli seed
+    python -m ozzb2b_api.db.cli claim-provider <provider-slug> <user-email>
+    python -m ozzb2b_api.db.cli unclaim-provider <provider-slug>
 """
 
 from __future__ import annotations
@@ -57,10 +59,71 @@ def reindex() -> None:
     asyncio.run(_run())
 
 
+def claim_provider(provider_slug: str, user_email: str) -> int:
+    """Link a provider's ownership to an existing user for testing/admin use."""
+    from sqlalchemy import select
+
+    from ozzb2b_api.db.models import Provider, User
+    from ozzb2b_api.db.session import get_sessionmaker
+
+    async def _run() -> int:
+        sessionmaker = get_sessionmaker()
+        async with sessionmaker() as session:
+            user = (
+                await session.execute(select(User).where(User.email == user_email))
+            ).scalar_one_or_none()
+            if user is None:
+                print(f"user not found: {user_email}", file=sys.stderr)
+                return 2
+            provider = (
+                await session.execute(select(Provider).where(Provider.slug == provider_slug))
+            ).scalar_one_or_none()
+            if provider is None:
+                print(f"provider not found: {provider_slug}", file=sys.stderr)
+                return 2
+            provider.claimed_by_user_id = user.id
+            await session.commit()
+            print(
+                f"provider '{provider.slug}' ({provider.display_name}) "
+                f"is now claimed by {user.email} ({user.id})"
+            )
+            return 0
+
+    return asyncio.run(_run())
+
+
+def unclaim_provider(provider_slug: str) -> int:
+    """Drop the ownership link on a provider."""
+    from sqlalchemy import select
+
+    from ozzb2b_api.db.models import Provider
+    from ozzb2b_api.db.session import get_sessionmaker
+
+    async def _run() -> int:
+        sessionmaker = get_sessionmaker()
+        async with sessionmaker() as session:
+            provider = (
+                await session.execute(select(Provider).where(Provider.slug == provider_slug))
+            ).scalar_one_or_none()
+            if provider is None:
+                print(f"provider not found: {provider_slug}", file=sys.stderr)
+                return 2
+            provider.claimed_by_user_id = None
+            await session.commit()
+            print(f"provider '{provider.slug}' is now unclaimed")
+            return 0
+
+    return asyncio.run(_run())
+
+
 def main(argv: list[str] | None = None) -> int:
     args = argv if argv is not None else sys.argv[1:]
     if not args:
-        print("usage: python -m ozzb2b_api.db.cli [migrate|seed|reindex]", file=sys.stderr)
+        print(
+            "usage: python -m ozzb2b_api.db.cli "
+            "[migrate|seed|reindex|claim-provider <slug> <email>|unclaim-provider <slug>]",
+            file=sys.stderr,
+        )
         return 2
     cmd = args[0]
     if cmd == "migrate":
@@ -72,6 +135,22 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "reindex":
         reindex()
         return 0
+    if cmd == "claim-provider":
+        if len(args) != 3:
+            print(
+                "usage: python -m ozzb2b_api.db.cli claim-provider <slug> <email>",
+                file=sys.stderr,
+            )
+            return 2
+        return claim_provider(args[1], args[2])
+    if cmd == "unclaim-provider":
+        if len(args) != 2:
+            print(
+                "usage: python -m ozzb2b_api.db.cli unclaim-provider <slug>",
+                file=sys.stderr,
+            )
+            return 2
+        return unclaim_provider(args[1])
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 2
 

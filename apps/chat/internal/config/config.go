@@ -14,9 +14,14 @@ const (
 	// tokenTypeWsChat must match the value issued by the API
 	// (security/tokens.py TOKEN_TYPE_WS_CHAT).
 	TokenTypeWsChat = "ws_chat"
+)
 
+// defaultAllowedOrigins is matched against the `Host` of the browser's Origin
+// header by coder/websocket (scheme is stripped before matching), so we store
+// bare hostnames here. Use `OZZB2B_CHAT_ALLOWED_ORIGINS` to extend.
+const (
 	defaultHTTPAddr         = ":8090"
-	defaultAllowedOrigins   = "https://ozzb2b.com,https://www.ozzb2b.com"
+	defaultAllowedOrigins   = "ozzb2b.com,www.ozzb2b.com"
 	defaultRedisURL         = "redis://localhost:6379/3"
 	defaultReadTimeout      = 30 * time.Second
 	defaultWriteTimeout     = 30 * time.Second
