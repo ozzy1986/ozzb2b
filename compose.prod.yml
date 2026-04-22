@@ -249,7 +249,7 @@ services:
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - /var/www/ozzb2b.com/data/grafana:/var/lib/grafana
     ports:
-      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:3102:3000"
     depends_on:
       prometheus:
         condition: service_healthy
