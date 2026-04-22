@@ -104,3 +104,23 @@ export type WsTokenResponse = {
   expires_at: string;
   ws_url: string;
 };
+
+export type AnalyticsSummary = {
+  days: number;
+  items: { event_type: string; count: number }[];
+};
+
+export type TopQueries = {
+  days: number;
+  items: { query: string; count: number }[];
+};
+
+export type TopProviders = {
+  days: number;
+  items: {
+    provider_id: string;
+    display_name: string;
+    slug: string;
+    count: number;
+  }[];
+};

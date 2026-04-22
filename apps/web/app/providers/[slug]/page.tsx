@@ -5,6 +5,7 @@ import { getProvider } from '@/lib/api';
 import type { ProviderDetail } from '@/lib/types';
 import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
 import { ContactProviderButton } from '@/components/ContactProviderButton';
+import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 
 export const revalidate = 60;
 
@@ -58,6 +59,19 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
     notFound();
   }
   const jsonLd = buildJsonLd(p);
+  const crumbs: Crumb[] = [
+    { label: 'Главная', href: '/' },
+    { label: 'Компании', href: '/providers?country=RU' },
+    ...(p.categories[0]
+      ? [
+          {
+            label: trCategory(p.categories[0].slug, p.categories[0].name),
+            href: `/providers?country=RU&category=${p.categories[0].slug}`,
+          },
+        ]
+      : []),
+    { label: p.display_name },
+  ];
 
   return (
     <article>
@@ -65,6 +79,7 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <Breadcrumbs items={crumbs} />
       <div className="detail-header">
         <div>
           <h1>{p.display_name}</h1>

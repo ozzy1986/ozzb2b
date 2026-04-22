@@ -1,4 +1,5 @@
 import type {
+  AnalyticsSummary,
   Category,
   CategoryTreeNode,
   ChatMessage,
@@ -9,6 +10,8 @@ import type {
   ProviderDetail,
   ProviderListResponse,
   TokenResponse,
+  TopProviders,
+  TopQueries,
   UserPublic,
   WsTokenResponse,
 } from './types';
@@ -199,9 +202,9 @@ export async function logout(): Promise<void> {
   }
 }
 
-export async function getMe(): Promise<UserPublic | null> {
+export async function getMe(init?: RequestInit): Promise<UserPublic | null> {
   try {
-    return await fetchJson<UserPublic>('/auth/me');
+    return await fetchJson<UserPublic>('/auth/me', init);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return null;
     throw err;
@@ -254,5 +257,41 @@ export async function issueWsToken(conversationId: string): Promise<WsTokenRespo
   return fetchJson<WsTokenResponse>(
     `/chat/conversations/${encodeURIComponent(conversationId)}/ws-token`,
     { method: 'POST' },
+  );
+}
+
+// ---- admin analytics ----
+//
+// These call /admin/* endpoints that require an admin session. The browser
+// automatically carries the HttpOnly cookie via `credentials: 'include'`.
+
+type AdminFetchInit = { headers?: Record<string, string> };
+
+export async function getAnalyticsSummary(
+  days: number,
+  init?: AdminFetchInit,
+): Promise<AnalyticsSummary> {
+  return fetchJson<AnalyticsSummary>(`/admin/analytics/summary?days=${days}`, init);
+}
+
+export async function getTopSearches(
+  days: number,
+  limit: number,
+  init?: AdminFetchInit,
+): Promise<TopQueries> {
+  return fetchJson<TopQueries>(
+    `/admin/analytics/top-searches?days=${days}&limit=${limit}`,
+    init,
+  );
+}
+
+export async function getTopProviders(
+  days: number,
+  limit: number,
+  init?: AdminFetchInit,
+): Promise<TopProviders> {
+  return fetchJson<TopProviders>(
+    `/admin/analytics/top-providers?days=${days}&limit=${limit}`,
+    init,
   );
 }

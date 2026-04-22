@@ -4,6 +4,7 @@ import { listProviders, searchProviders } from '@/lib/api';
 import type { ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/types';
 import { ProviderFilters } from '@/components/ProviderFilters';
 import { trCategory, trCity, trCountry } from '@/lib/ru';
+import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 
 export const revalidate = 30;
 
@@ -81,8 +82,20 @@ export default async function ProvidersPage({
 
   const emptyFacet: FacetValue[] = [];
 
+  const activeFilters =
+    toList(params.category).length +
+    toList(params.city).length +
+    toList(params.legal_form).length +
+    (q ? 1 : 0);
+
+  const crumbs: Crumb[] = [
+    { label: 'Главная', href: '/' },
+    { label: 'Компании' },
+  ];
+
   return (
     <>
+      <Breadcrumbs items={crumbs} />
       <div className="hero">
         <h1>Компании</h1>
         <p>
@@ -99,6 +112,14 @@ export default async function ProvidersPage({
 
       <div className="layout">
         <aside>
+          <div className="filters-head">
+            <strong>Фильтры</strong>
+            {activeFilters > 0 ? (
+              <Link className="filter-clear" href="/providers?country=RU">
+                Сбросить ({activeFilters})
+              </Link>
+            ) : null}
+          </div>
           <ProviderFilters
             currentQ={q ?? ''}
             currentCategories={toList(params.category)}

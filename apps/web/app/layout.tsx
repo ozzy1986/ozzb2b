@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { SiteNav } from '@/components/SiteNav';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,14 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <span className="brand-mark" aria-hidden>◎</span>
               <span>ozzb2b</span>
             </Link>
-            <nav className="site-nav" aria-label="Основная навигация">
-              <Link href="/providers">Компании</Link>
-              <Link href="/categories">Категории</Link>
-              <Link href="/chat">Чаты</Link>
-              <a href="https://github.com/ozzy1986/ozzb2b" target="_blank" rel="noreferrer">
-                GitHub
-              </a>
-            </nav>
+            <SiteNav />
           </div>
         </header>
         <main className="container site-main">{children}</main>
