@@ -39,10 +39,14 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default=UserRole.CLIENT,
     )
-    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
-    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+    refresh_tokens: Mapped[list[RefreshToken]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
@@ -71,4 +75,4 @@ class RefreshToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="refresh_tokens")
+    user: Mapped[User] = relationship(back_populates="refresh_tokens")

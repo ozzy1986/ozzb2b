@@ -95,7 +95,9 @@ async def issue_tokens(
     settings: Settings | None = None,
 ) -> IssuedTokens:
     cfg = settings or get_settings()
-    access_token, access_exp = create_access_token(user_id=user.id, role=user.role.value, settings=cfg)
+    access_token, access_exp = create_access_token(
+        user_id=user.id, role=user.role.value, settings=cfg
+    )
     refresh_raw, refresh_exp = create_refresh_token(settings=cfg)
     refresh_hash = hash_refresh_token(refresh_raw)
     record = RefreshToken(
@@ -162,7 +164,9 @@ async def rotate_refresh(
     if existing.expires_at <= datetime.now(tz=UTC):
         raise InvalidRefreshTokenError("refresh token expired")
 
-    user = (await session.execute(select(User).where(User.id == existing.user_id))).scalar_one_or_none()
+    user = (
+        await session.execute(select(User).where(User.id == existing.user_id))
+    ).scalar_one_or_none()
     if user is None:
         raise InvalidRefreshTokenError("user not found")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -116,7 +116,9 @@ async def list_legal_forms(session: AsyncSession, country_code: str | None) -> l
     return list((await session.execute(stmt)).scalars().all())
 
 
-async def facet_counts(session: AsyncSession, f: ProviderFilter) -> dict[str, list[tuple[str, str, int]]]:
+async def facet_counts(
+    session: AsyncSession, f: ProviderFilter
+) -> dict[str, list[tuple[str, str, int]]]:
     """Compute facet counts for the current filter set, ignoring the facet's own axis."""
     async def count_axis(axis: str) -> list[tuple[str, str, int]]:
         flt = ProviderFilter(

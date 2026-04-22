@@ -127,7 +127,9 @@ class PostgresFtsGateway(SearchGateway):
             rank = func.ts_rank_cd(Provider.search_document, ts)
             stmt = stmt.add_columns(rank).order_by(rank.desc())
         else:
-            stmt = stmt.add_columns(func.cast(1.0, type_=None)).order_by(Provider.display_name.asc())
+            stmt = stmt.add_columns(func.cast(1.0, type_=None)).order_by(
+                Provider.display_name.asc()
+            )
 
         stmt = stmt.distinct()
         total_stmt = select(func.count()).select_from(stmt.subquery())

@@ -55,11 +55,23 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC", "S", "N", "RUF"]
-ignore = ["S101", "S105", "S106"]
+# N811: `PgUUID` alias for `sqlalchemy.dialects.postgresql.UUID` is an idiomatic
+# SQLAlchemy pattern used to avoid clashing with `uuid.UUID`; not worth renaming.
+ignore = ["S101", "S105", "S106", "N811"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S", "N"]
-"src/ozzb2b_api/db/seed.py" = ["E501"]
+# Seed file intentionally contains Russian/Ukrainian strings (RUF001) and long
+# description literals (E501) that we don't want to reflow.
+"src/ozzb2b_api/db/seed.py" = ["E501", "RUF001"]
+# Alembic baseline migrations mirror SQL column definitions and are read
+# top-to-bottom; wrapping them hurts readability more than it helps.
+"src/ozzb2b_api/db/migrations/versions/*.py" = ["E501"]
+# Keep string forward-refs in ORM relationship() and Pydantic recursive models:
+# they're needed by SQLAlchemy / Pydantic for runtime resolution and by
+# TYPE_CHECKING-guarded imports used to break circular dependencies.
+"src/ozzb2b_api/db/models/*.py" = ["UP037"]
+"src/ozzb2b_api/schemas/*.py" = ["UP037"]
 
 [tool.mypy]
 python_version = "3.12"

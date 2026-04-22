@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from ozzb2b_api.app import create_app
 from ozzb2b_api.config import Settings
-from ozzb2b_api.db.base import Base
 from ozzb2b_api.db import models  # noqa: F401  # register models in metadata
+from ozzb2b_api.db.base import Base
 
 
 @pytest.fixture()

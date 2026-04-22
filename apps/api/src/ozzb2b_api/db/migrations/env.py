@@ -12,8 +12,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from ozzb2b_api.config import get_settings
-from ozzb2b_api.db.base import Base
 from ozzb2b_api.db import models  # noqa: F401  # import-time side-effect: register models
+from ozzb2b_api.db.base import Base
 
 config = context.config
 if config.config_file_name is not None and Path(config.config_file_name).is_file():

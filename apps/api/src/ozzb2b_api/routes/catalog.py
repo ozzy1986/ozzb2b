@@ -78,7 +78,7 @@ async def list_providers_endpoint(
     f = catalog_service.ProviderFilter(
         query=q,
         category_slugs=tuple(categories or ()),
-        country_codes=tuple((countries or [])),
+        country_codes=tuple(countries or []),
         city_slugs=tuple(cities or ()),
         legal_form_codes=tuple(legal_forms or ()),
         limit=limit,
@@ -90,10 +90,22 @@ async def list_providers_endpoint(
     if with_facets:
         counts = await catalog_service.facet_counts(db, f)
         facets = ProviderFacets(
-            categories=[ProviderFacetValue(value=v, label=l, count=c) for v, l, c in counts["categories"]],
-            countries=[ProviderFacetValue(value=v, label=l, count=c) for v, l, c in counts["countries"]],
-            cities=[ProviderFacetValue(value=v, label=l, count=c) for v, l, c in counts["cities"]],
-            legal_forms=[ProviderFacetValue(value=v, label=l, count=c) for v, l, c in counts["legal_forms"]],
+            categories=[
+                ProviderFacetValue(value=v, label=lbl, count=c)
+                for v, lbl, c in counts["categories"]
+            ],
+            countries=[
+                ProviderFacetValue(value=v, label=lbl, count=c)
+                for v, lbl, c in counts["countries"]
+            ],
+            cities=[
+                ProviderFacetValue(value=v, label=lbl, count=c)
+                for v, lbl, c in counts["cities"]
+            ],
+            legal_forms=[
+                ProviderFacetValue(value=v, label=lbl, count=c)
+                for v, lbl, c in counts["legal_forms"]
+            ],
         )
     return ProviderListResponse(
         total=total, limit=limit, offset=offset, items=items, facets=facets
