@@ -6,6 +6,7 @@ Examples:
     python -m ozzb2b_api.db.cli seed
     python -m ozzb2b_api.db.cli claim-provider <provider-slug> <user-email>
     python -m ozzb2b_api.db.cli unclaim-provider <provider-slug>
+    python -m ozzb2b_api.db.cli set-role <user-email> <admin|client>
 """
 
 from __future__ import annotations
@@ -92,6 +93,39 @@ def claim_provider(provider_slug: str, user_email: str) -> int:
     return asyncio.run(_run())
 
 
+def set_role(user_email: str, role: str) -> int:
+    """Change the role of an existing user (admin-only admin knob)."""
+    from sqlalchemy import select
+
+    from ozzb2b_api.db.models import User, UserRole
+    from ozzb2b_api.db.session import get_sessionmaker
+
+    try:
+        new_role = UserRole(role.lower())
+    except ValueError:
+        print(
+            f"unknown role: {role!r} (supported: {', '.join(r.value for r in UserRole)})",
+            file=sys.stderr,
+        )
+        return 2
+
+    async def _run() -> int:
+        sessionmaker = get_sessionmaker()
+        async with sessionmaker() as session:
+            user = (
+                await session.execute(select(User).where(User.email == user_email))
+            ).scalar_one_or_none()
+            if user is None:
+                print(f"user not found: {user_email}", file=sys.stderr)
+                return 2
+            user.role = new_role
+            await session.commit()
+            print(f"user {user.email} ({user.id}) role set to {new_role.value}")
+            return 0
+
+    return asyncio.run(_run())
+
+
 def unclaim_provider(provider_slug: str) -> int:
     """Drop the ownership link on a provider."""
     from sqlalchemy import select
@@ -151,6 +185,14 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         return unclaim_provider(args[1])
+    if cmd == "set-role":
+        if len(args) != 3:
+            print(
+                "usage: python -m ozzb2b_api.db.cli set-role <email> <admin|client>",
+                file=sys.stderr,
+            )
+            return 2
+        return set_role(args[1], args[2])
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 2
 
