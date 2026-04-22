@@ -40,8 +40,12 @@ EOF
 chmod 600 .env.prod
 
 log "sync nginx vhosts"
-install -m 0644 infra/nginx/api.ozzb2b.com.conf /etc/nginx/sites-available/api.ozzb2b.com.conf
-ln -sf /etc/nginx/sites-available/api.ozzb2b.com.conf /etc/nginx/sites-enabled/api.ozzb2b.com.conf
+# Existing vhost file on the VPS is /etc/nginx/sites-{available,enabled}/api.ozzb2b.com
+# (no .conf suffix). Write to that exact path to avoid ending up with two vhosts.
+install -m 0644 infra/nginx/api.ozzb2b.com.conf /etc/nginx/sites-available/api.ozzb2b.com
+ln -sf /etc/nginx/sites-available/api.ozzb2b.com /etc/nginx/sites-enabled/api.ozzb2b.com
+# Clean up any stray .conf variant we might have created on earlier attempts.
+rm -f /etc/nginx/sites-available/api.ozzb2b.com.conf /etc/nginx/sites-enabled/api.ozzb2b.com.conf
 nginx -t && systemctl reload nginx
 
 log "docker compose up --build"
