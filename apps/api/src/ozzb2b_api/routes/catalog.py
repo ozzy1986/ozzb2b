@@ -59,9 +59,15 @@ def _to_detail(provider: Provider) -> ProviderDetail:
         source=provider.source,
         source_url=provider.source_url,
         status=provider.status.value,
+        is_claimed=bool(provider.is_claimed),
         created_at=provider.created_at,
         updated_at=provider.updated_at,
     )
+
+
+def to_provider_detail(provider: Provider) -> ProviderDetail:
+    """Public alias for the internal detail mapper so other routers can reuse it."""
+    return _to_detail(provider)
 
 
 @router.get("/providers", response_model=ProviderListResponse)

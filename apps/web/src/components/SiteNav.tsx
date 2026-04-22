@@ -15,6 +15,10 @@ export function SiteNav() {
       <Link href="/providers">Компании</Link>
       <Link href="/categories">Категории</Link>
       <Link href="/chat">Чаты</Link>
+      {current.status === 'authenticated' &&
+      (current.user.role === 'provider_owner' || current.user.role === 'admin') ? (
+        <Link href="/account/companies">Мои компании</Link>
+      ) : null}
       {current.status === 'authenticated' && current.user.role === 'admin' ? (
         <Link href="/admin/analytics">Аналитика</Link>
       ) : null}

@@ -39,6 +39,7 @@ export type ProviderDetail = ProviderSummary & {
   source: string | null;
   source_url: string | null;
   status: string;
+  is_claimed: boolean;
   created_at: string;
   updated_at: string;
 };

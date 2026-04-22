@@ -5,17 +5,21 @@ from ozzb2b_api.db.models.chat import Conversation, Message
 from ozzb2b_api.db.models.geo import City, Country
 from ozzb2b_api.db.models.legal_form import LegalForm
 from ozzb2b_api.db.models.provider import Provider, ProviderCategory, ProviderStatus
+from ozzb2b_api.db.models.provider_claim import ClaimMethod, ClaimStatus, ProviderClaim
 from ozzb2b_api.db.models.user import RefreshToken, User, UserRole
 
 __all__ = [
     "Category",
     "City",
+    "ClaimMethod",
+    "ClaimStatus",
     "Conversation",
     "Country",
     "LegalForm",
     "Message",
     "Provider",
     "ProviderCategory",
+    "ProviderClaim",
     "ProviderStatus",
     "RefreshToken",
     "User",

@@ -13,7 +13,7 @@ from ozzb2b_api.config import Settings, get_settings
 from ozzb2b_api.logging import configure_logging, get_logger
 from ozzb2b_api.observability.metrics import PrometheusMiddleware, metrics_response
 from ozzb2b_api.observability.security_headers import SecurityHeadersMiddleware
-from ozzb2b_api.routes import admin, auth, catalog, chat, health, search
+from ozzb2b_api.routes import admin, auth, catalog, chat, claims, health, search
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -54,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(search.router)
     app.include_router(admin.router)
     app.include_router(chat.router)
+    app.include_router(claims.router)
 
     @app.get("/metrics", include_in_schema=False)
     def _metrics() -> object:

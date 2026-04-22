@@ -12,9 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from ozzb2b_api.config import get_settings
-from ozzb2b_api.db.models import User, UserRole
-from ozzb2b_api.routes.deps import get_current_user
+from ozzb2b_api.db.models import ProviderClaim, User, UserRole
+from ozzb2b_api.routes.deps import DbSession, get_current_user
+from ozzb2b_api.schemas.claims import ClaimPublic, ClaimRejectRequest
 from ozzb2b_api.services import analytics as analytics_service
+from ozzb2b_api.services import claims as claims_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -135,6 +137,58 @@ async def analytics_top_searches(
         days=days,
         items=[TopQueryItem(query=r.query, count=r.count) for r in rows],
     )
+
+
+@router.get("/claims", response_model=list[ClaimPublic])
+async def list_pending_claims_endpoint(
+    db: DbSession,
+    _admin: Annotated[User, Depends(_require_admin)],
+) -> list[ClaimPublic]:
+    rows = await claims_service.list_pending_claims(db)
+    return [ClaimPublic.model_validate(r) for r in rows]
+
+
+async def _load_claim_or_404(db: DbSession, claim_id: str) -> ProviderClaim:
+    import uuid
+
+    try:
+        cid = uuid.UUID(claim_id)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "claim not found") from exc
+    obj = await db.get(ProviderClaim, cid)
+    if obj is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "claim not found")
+    return obj
+
+
+@router.post("/claims/{claim_id}/approve", response_model=ClaimPublic)
+async def approve_claim_endpoint(
+    claim_id: str,
+    db: DbSession,
+    admin: Annotated[User, Depends(_require_admin)],
+) -> ClaimPublic:
+    claim = await _load_claim_or_404(db, claim_id)
+    try:
+        updated = await claims_service.admin_verify_claim(db, claim=claim, reviewer=admin)
+    except claims_service.ProviderAlreadyClaimedError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except claims_service.ClaimError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return ClaimPublic.model_validate(updated)
+
+
+@router.post("/claims/{claim_id}/reject", response_model=ClaimPublic)
+async def reject_claim_endpoint(
+    claim_id: str,
+    payload: ClaimRejectRequest,
+    db: DbSession,
+    admin: Annotated[User, Depends(_require_admin)],
+) -> ClaimPublic:
+    claim = await _load_claim_or_404(db, claim_id)
+    updated = await claims_service.admin_reject_claim(
+        db, claim=claim, reviewer=admin, reason=payload.reason
+    )
+    return ClaimPublic.model_validate(updated)
 
 
 @router.get("/analytics/top-providers", response_model=TopProvidersResponse)

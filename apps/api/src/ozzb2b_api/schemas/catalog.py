@@ -78,7 +78,7 @@ class ProviderDetail(ProviderSummary):
     source: str | None
     source_url: str | None
     status: str
-    last_scraped_at: datetime | None
+    is_claimed: bool = False
     created_at: datetime
     updated_at: datetime
 

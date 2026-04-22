@@ -7,6 +7,7 @@ import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
 import { ContactProviderButton } from '@/components/ContactProviderButton';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { FreshnessBadge } from '@/components/FreshnessBadge';
+import { ClaimProviderButton } from '@/components/ClaimProviderButton';
 
 export const revalidate = 60;
 
@@ -130,6 +131,8 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
             </p>
             <ContactProviderButton providerSlug={p.slug} />
           </div>
+
+          <ClaimProviderButton providerSlug={p.slug} isClaimed={p.is_claimed} />
 
           <div className="sidebar-card">
             <h3>Контакты</h3>

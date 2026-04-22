@@ -295,3 +295,71 @@ export async function getTopProviders(
     init,
   );
 }
+
+// ---- claims ----
+
+export type ClaimInitiateResponse = {
+  claim_id: string;
+  status: string;
+  token: string;
+  meta_tag: string;
+  instructions: string;
+};
+
+export type ClaimPublic = {
+  id: string;
+  provider_id: string;
+  user_id: string;
+  status: string;
+  method: string;
+  verified_at: string | null;
+  rejected_at: string | null;
+  rejected_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProviderUpdate = Partial<{
+  display_name: string;
+  description: string;
+  email: string;
+  phone: string;
+  address: string;
+  logo_url: string;
+}>;
+
+export async function initiateClaim(slug: string): Promise<ClaimInitiateResponse> {
+  return fetchJson<ClaimInitiateResponse>(
+    `/providers/${encodeURIComponent(slug)}/claim`,
+    { method: 'POST' },
+  );
+}
+
+export async function verifyClaim(slug: string): Promise<ClaimPublic> {
+  return fetchJson<ClaimPublic>(
+    `/providers/${encodeURIComponent(slug)}/claim/verify`,
+    { method: 'POST' },
+  );
+}
+
+export async function listMyClaims(init?: RequestInit): Promise<ClaimPublic[]> {
+  return fetchJson<ClaimPublic[]>('/me/claims', init);
+}
+
+export async function listMyProviders(init?: RequestInit): Promise<ProviderDetail[]> {
+  return fetchJson<ProviderDetail[]>('/me/providers', init);
+}
+
+export async function updateOwnedProvider(
+  slug: string,
+  patch: ProviderUpdate,
+): Promise<ProviderDetail> {
+  return fetchJson<ProviderDetail>(
+    `/providers/${encodeURIComponent(slug)}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    },
+  );
+}
