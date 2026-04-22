@@ -15,7 +15,6 @@ import structlog
 from slugify import slugify
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ozzb2b_api.db.models import (
     Category,
@@ -423,12 +422,15 @@ async def _upsert_providers(
     cities: dict[tuple[str, str], City],
     legal_forms: dict[tuple[str | None, str], LegalForm],
 ) -> int:
+    """Upsert demo providers and their category links idempotently."""
+    from sqlalchemy import delete, insert
+
+    from ozzb2b_api.db.models import ProviderCategory
+
     inserted = 0
     for seed in PROVIDERS:
         provider = (
-            await session.execute(
-                select(Provider).options(selectinload(Provider.categories)).where(Provider.slug == seed.slug)
-            )
+            await session.execute(select(Provider).where(Provider.slug == seed.slug))
         ).scalar_one_or_none()
         country = countries[seed.country_code]
         city = cities[(seed.country_code, seed.city_name)]
@@ -458,9 +460,16 @@ async def _upsert_providers(
             session.add(provider)
             await session.flush()
             inserted += 1
-        # Sync categories
-        desired = [categories[s] for s in seed.category_slugs if s in categories]
-        provider.categories = desired
+        # Sync categories explicitly via the link table to avoid async lazy-loading.
+        desired_ids = [categories[s].id for s in seed.category_slugs if s in categories]
+        await session.execute(
+            delete(ProviderCategory).where(ProviderCategory.provider_id == provider.id)
+        )
+        if desired_ids:
+            await session.execute(
+                insert(ProviderCategory),
+                [{"provider_id": provider.id, "category_id": cid} for cid in desired_ids],
+            )
         await session.flush()
     return inserted
 
