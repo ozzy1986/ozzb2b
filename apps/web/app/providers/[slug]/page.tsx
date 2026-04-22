@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProvider } from '@/lib/api';
 import type { ProviderDetail } from '@/lib/types';
+import { trCategory, trCountry, trLegalForm } from '@/lib/ru';
 
 export const revalidate = 60;
 
@@ -11,10 +12,10 @@ type RouteParams = Promise<{ slug: string }>;
 export async function generateMetadata({ params }: { params: RouteParams }): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProvider(slug);
-  if (!p) return { title: 'Provider not found' };
+  if (!p) return { title: 'Компания не найдена' };
   return {
     title: p.display_name,
-    description: p.description?.slice(0, 180) ?? `B2B provider — ${p.display_name}`,
+    description: p.description?.slice(0, 180) ?? `B2B-компания — ${p.display_name}`,
     alternates: { canonical: `/providers/${p.slug}` },
     openGraph: {
       title: p.display_name,
@@ -67,16 +68,20 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
         <div>
           <h1>{p.display_name}</h1>
           <div className="chips">
-            {p.country ? <span className="chip">{p.country.name}</span> : null}
+            {p.country ? (
+              <span className="chip">{trCountry(p.country.code, p.country.name)}</span>
+            ) : null}
             {p.city ? <span className="chip">{p.city.name}</span> : null}
-            {p.legal_form ? <span className="chip">{p.legal_form.name}</span> : null}
-            {p.year_founded ? <span className="chip">Founded {p.year_founded}</span> : null}
-            {p.employee_count_range ? <span className="chip">{p.employee_count_range} people</span> : null}
+            {p.legal_form ? (
+              <span className="chip">{trLegalForm(p.legal_form.code, p.legal_form.name)}</span>
+            ) : null}
+            {p.year_founded ? <span className="chip">Основана в {p.year_founded}</span> : null}
+            {p.employee_count_range ? <span className="chip">{p.employee_count_range} сотрудников</span> : null}
           </div>
         </div>
         <div>
-          <Link href="/providers" className="chip">
-            ← Back to providers
+          <Link href="/providers?country=RU" className="chip">
+            ← К списку компаний
           </Link>
         </div>
       </div>
@@ -84,15 +89,15 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
       <div className="detail-grid">
         <div className="prose">
           <section>
-            <h2>About</h2>
-            <p>{p.description ?? 'No description provided yet.'}</p>
+            <h2>О компании</h2>
+            <p>{p.description ?? 'Описание пока не добавлено.'}</p>
           </section>
           <section>
-            <h2>Services</h2>
+            <h2>Услуги</h2>
             <div className="chips">
               {p.categories.map((c) => (
-                <Link key={c.id} href={`/providers?category=${c.slug}`} className="chip">
-                  {c.name}
+                <Link key={c.id} href={`/providers?country=RU&category=${c.slug}`} className="chip">
+                  {trCategory(c.slug, c.name)}
                 </Link>
               ))}
             </div>
@@ -101,11 +106,11 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
 
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="sidebar-card">
-            <h3>Contact</h3>
+            <h3>Контакты</h3>
             <dl>
               {p.website ? (
                 <>
-                  <dt>Website</dt>
+                  <dt>Сайт</dt>
                   <dd>
                     <a href={p.website} target="_blank" rel="noreferrer">
                       {p.website.replace(/^https?:\/\//, '')}
@@ -123,7 +128,7 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
               ) : null}
               {p.phone ? (
                 <>
-                  <dt>Phone</dt>
+                  <dt>Телефон</dt>
                   <dd>
                     <a href={`tel:${p.phone.replace(/\s+/g, '')}`}>{p.phone}</a>
                   </dd>
@@ -131,7 +136,7 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
               ) : null}
               {p.address ? (
                 <>
-                  <dt>Address</dt>
+                  <dt>Адрес</dt>
                   <dd>{p.address}</dd>
                 </>
               ) : null}
@@ -139,25 +144,25 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
           </div>
 
           <div className="sidebar-card">
-            <h3>Company</h3>
+            <h3>Данные компании</h3>
             <dl>
-              <dt>Legal name</dt>
+              <dt>Юридическое наименование</dt>
               <dd>{p.legal_name}</dd>
               {p.registration_number ? (
                 <>
-                  <dt>Reg. number</dt>
+                  <dt>Рег. номер</dt>
                   <dd>{p.registration_number}</dd>
                 </>
               ) : null}
               {p.tax_id ? (
                 <>
-                  <dt>Tax ID</dt>
+                  <dt>ИНН / налоговый ID</dt>
                   <dd>{p.tax_id}</dd>
                 </>
               ) : null}
               {p.source ? (
                 <>
-                  <dt>Source</dt>
+                  <dt>Источник</dt>
                   <dd>{p.source}</dd>
                 </>
               ) : null}

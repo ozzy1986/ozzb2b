@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 import type { FacetValue } from '@/lib/types';
+import { trCategory, trCountry, trLegalForm } from '@/lib/ru';
 
 type Props = {
   currentQ: string;
@@ -17,10 +18,10 @@ type Props = {
 };
 
 const GROUPS: ReadonlyArray<{ key: keyof Props; label: string; param: string }> = [
-  { key: 'categories', label: 'Category', param: 'category' },
-  { key: 'countries', label: 'Country', param: 'country' },
-  { key: 'cities', label: 'City', param: 'city' },
-  { key: 'legalForms', label: 'Legal form', param: 'legal_form' },
+  { key: 'categories', label: 'Категория', param: 'category' },
+  { key: 'countries', label: 'Страна', param: 'country' },
+  { key: 'cities', label: 'Город', param: 'city' },
+  { key: 'legalForms', label: 'Форма компании', param: 'legal_form' },
 ];
 
 export function ProviderFilters(props: Props) {
@@ -67,7 +68,7 @@ export function ProviderFilters(props: Props) {
   return (
     <div className="filters">
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <strong>Filters</strong>
+        <strong>Фильтры</strong>
         <button
           type="button"
           onClick={clearAll}
@@ -79,7 +80,7 @@ export function ProviderFilters(props: Props) {
             cursor: 'pointer',
           }}
         >
-          clear all
+          сбросить
         </button>
       </div>
       {GROUPS.map((g) => {
@@ -89,7 +90,7 @@ export function ProviderFilters(props: Props) {
           return (
             <div key={g.param} className="filter-group">
               <h4>{g.label}</h4>
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No options</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Нет вариантов</div>
             </div>
           );
         }
@@ -98,6 +99,14 @@ export function ProviderFilters(props: Props) {
             <h4>{g.label}</h4>
             {values.map((v) => {
               const selected = current[g.param].has(v.value);
+              const label =
+                g.param === 'category'
+                  ? trCategory(v.value, v.label)
+                  : g.param === 'country'
+                    ? trCountry(v.value.toUpperCase(), v.label)
+                    : g.param === 'legal_form'
+                      ? trLegalForm(v.value.toUpperCase(), v.label)
+                      : v.label;
               return (
                 <label key={v.value}>
                   <input
@@ -105,7 +114,7 @@ export function ProviderFilters(props: Props) {
                     checked={selected}
                     onChange={() => toggle(g.param, v.value)}
                   />
-                  <span>{v.label}</span>
+                  <span>{label}</span>
                   <span className="count">{v.count}</span>
                 </label>
               );

@@ -6,11 +6,11 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://ozzb2b.com'),
   title: {
-    default: 'ozzb2b — B2B outsourcing marketplace',
+    default: 'ozzb2b — маркетплейс B2B-исполнителей',
     template: '%s — ozzb2b',
   },
   description:
-    'Find outsourcing partners for IT, accounting, legal, marketing, and HR services. Verified providers, transparent info, direct contact.',
+    'Платформа для поиска проверенных B2B-подрядчиков в России: ИТ, бухгалтерия, юридические и маркетинговые услуги.',
   applicationName: 'ozzb2b',
   robots: { index: true, follow: true },
   openGraph: {
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ru">
       <body>
         <header className="site-header">
           <div className="container header-inner">
@@ -36,9 +36,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <span className="brand-mark" aria-hidden>◎</span>
               <span>ozzb2b</span>
             </Link>
-            <nav className="site-nav" aria-label="Primary">
-              <Link href="/providers">Providers</Link>
-              <Link href="/categories">Categories</Link>
+            <nav className="site-nav" aria-label="Основная навигация">
+              <Link href="/providers">Компании</Link>
+              <Link href="/categories">Категории</Link>
               <a href="https://github.com/ozzy1986/ozzb2b" target="_blank" rel="noreferrer">
                 GitHub
               </a>
@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="container footer-inner">
             <span>© {new Date().getFullYear()} ozzb2b</span>
             <span>
-              <Link href="/sitemap.xml">sitemap</Link> · <Link href="/robots.txt">robots</Link>
+              <Link href="/sitemap.xml">карта сайта</Link> · <Link href="/robots.txt">robots</Link>
             </span>
           </div>
         </footer>

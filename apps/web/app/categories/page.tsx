@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getCategoryTree } from '@/lib/api';
+import { trCategory, trCategoryDescription } from '@/lib/ru';
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: 'Categories',
-  description: 'Browse service categories: IT, accounting, legal, marketing, HR.',
+  title: 'Категории',
+  description: 'Категории услуг для бизнеса в России: ИТ, бухгалтерия, юристы, маркетинг, HR.',
 };
 
 export default async function CategoriesPage() {
@@ -15,20 +16,28 @@ export default async function CategoriesPage() {
   return (
     <>
       <div className="hero">
-        <h1>Categories</h1>
-        <p>Pick an area to find outsourcing providers specialized in it.</p>
+        <h1>Категории</h1>
+        <p>Выберите направление и найдите профильных B2B-подрядчиков.</p>
       </div>
       <div className="grid grid-categories">
         {roots.map((c) => (
           <section key={c.id} className="card">
             <h3>
-              <Link href={`/providers?category=${c.slug}`}>{c.name}</Link>
+              <Link href={`/providers?country=RU&category=${c.slug}`}>
+                {trCategory(c.slug, c.name)}
+              </Link>
             </h3>
-            {c.description ? <p>{c.description}</p> : null}
+            {trCategoryDescription(c.slug, c.description) ? (
+              <p>{trCategoryDescription(c.slug, c.description)}</p>
+            ) : null}
             <div className="meta">
               {c.children.map((child) => (
-                <Link key={child.id} href={`/providers?category=${child.slug}`} className="chip">
-                  {child.name}
+                <Link
+                  key={child.id}
+                  href={`/providers?country=RU&category=${child.slug}`}
+                  className="chip"
+                >
+                  {trCategory(child.slug, child.name)}
                 </Link>
               ))}
             </div>

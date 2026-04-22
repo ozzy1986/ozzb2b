@@ -3,12 +3,13 @@ import type { Metadata } from 'next';
 import { listProviders, searchProviders } from '@/lib/api';
 import type { ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/types';
 import { ProviderFilters } from '@/components/ProviderFilters';
+import { trCategory, trCountry } from '@/lib/ru';
 
 export const revalidate = 30;
 
 export const metadata: Metadata = {
-  title: 'Providers',
-  description: 'Browse and filter verified B2B outsourcing providers.',
+  title: 'Компании',
+  description: 'Каталог проверенных B2B-компаний в России с фильтрами и поиском.',
 };
 
 type SearchParams = {
@@ -34,11 +35,13 @@ export default async function ProvidersPage({
   const q = typeof params.q === 'string' ? params.q : undefined;
   const offset = Math.max(0, Number.parseInt(params.offset ?? '0', 10) || 0);
   const limit = 24;
+  const rawCountries = toList(params.country);
+  const effectiveCountries = rawCountries.length > 0 ? rawCountries : ['RU'];
 
   const listParams = {
     q,
     categories: toList(params.category),
-    countries: toList(params.country),
+    countries: effectiveCountries,
     cities: toList(params.city),
     legal_forms: toList(params.legal_form),
     limit,
@@ -47,7 +50,7 @@ export default async function ProvidersPage({
   };
 
   let data: ProviderListResponse | null = null;
-  let engineLabel = 'catalog';
+  let engineLabel = 'каталог';
   if (q) {
     try {
       const search = await searchProviders({ ...listParams, q });
@@ -71,21 +74,26 @@ export default async function ProvidersPage({
   const total = data?.total ?? 0;
   const nextOffset = offset + limit;
   const prevOffset = Math.max(0, offset - limit);
+  const linkParams: SearchParams = {
+    ...params,
+    country: effectiveCountries,
+  };
 
   const emptyFacet: FacetValue[] = [];
 
   return (
     <>
       <div className="hero">
-        <h1>Providers</h1>
+        <h1>Компании</h1>
         <p>
           {q
-            ? `Results for "${q}" — ${total} match${total === 1 ? '' : 'es'} (${engineLabel})`
-            : `${total} providers`}
+            ? `Результаты по запросу "${q}" — ${total} (${engineLabel})`
+            : `${total} компаний`}
         </p>
         <form className="search-form" action="/providers" method="get">
-          <input name="q" defaultValue={q ?? ''} placeholder="Search providers…" aria-label="Search" />
-          <button type="submit">Search</button>
+          <input type="hidden" name="country" value="RU" />
+          <input name="q" defaultValue={q ?? ''} placeholder="Поиск компаний..." aria-label="Поиск" />
+          <button type="submit">Искать</button>
         </form>
       </div>
 
@@ -94,7 +102,7 @@ export default async function ProvidersPage({
           <ProviderFilters
             currentQ={q ?? ''}
             currentCategories={toList(params.category)}
-            currentCountries={toList(params.country)}
+            currentCountries={effectiveCountries}
             currentCities={toList(params.city)}
             currentLegalForms={toList(params.legal_form)}
             categories={facets?.categories ?? emptyFacet}
@@ -106,11 +114,11 @@ export default async function ProvidersPage({
         <section>
           <div className="listing-head">
             <span className="total">
-              Showing {Math.min(total, items.length)} of {total}
+              Показано {Math.min(total, items.length)} из {total}
             </span>
           </div>
           {items.length === 0 ? (
-            <div className="empty">No providers match the current filters.</div>
+            <div className="empty">По текущим фильтрам ничего не найдено.</div>
           ) : (
             <div className="grid grid-providers">
               {items.map((p) => (
@@ -118,11 +126,13 @@ export default async function ProvidersPage({
                   <h3>{p.display_name}</h3>
                   {p.description ? <p>{p.description}</p> : null}
                   <div className="meta">
-                    {p.country ? <span className="chip">{p.country.name}</span> : null}
+                    {p.country ? (
+                      <span className="chip">{trCountry(p.country.code, p.country.name)}</span>
+                    ) : null}
                     {p.city ? <span className="chip">{p.city.name}</span> : null}
                     {p.categories.slice(0, 3).map((c) => (
                       <span key={c.id} className="chip">
-                        {c.name}
+                        {trCategory(c.slug, c.name)}
                       </span>
                     ))}
                   </div>
@@ -136,17 +146,17 @@ export default async function ProvidersPage({
               {offset > 0 ? (
                 <Link
                   className="chip"
-                  href={`/providers?${toQueryString({ ...params, offset: String(prevOffset) })}`}
+                  href={`/providers?${toQueryString({ ...linkParams, offset: String(prevOffset) })}`}
                 >
-                  ← Previous
+                  ← Назад
                 </Link>
               ) : null}
               {nextOffset < total ? (
                 <Link
                   className="chip"
-                  href={`/providers?${toQueryString({ ...params, offset: String(nextOffset) })}`}
+                  href={`/providers?${toQueryString({ ...linkParams, offset: String(nextOffset) })}`}
                 >
-                  Next →
+                  Далее →
                 </Link>
               ) : null}
             </nav>
