@@ -11,9 +11,11 @@ services:
     image: getmeili/meilisearch:v1.11
     container_name: ozzb2b-meilisearch
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
       MEILI_ENV: production
-      MEILI_MASTER_KEY: ${OZZB2B_MEILISEARCH_KEY}
+      MEILI_MASTER_KEY: ${OZZB2B_MEILISEARCH_KEY:?set OZZB2B_MEILISEARCH_KEY in .env.prod}
       MEILI_NO_ANALYTICS: "true"
     ports:
       - "127.0.0.1:7700:7700"
