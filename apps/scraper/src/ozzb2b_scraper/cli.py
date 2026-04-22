@@ -45,6 +45,11 @@ def main(argv: list[str] | None = None) -> int:
         "run-all", help="Run every real (non-demo) spider sequentially"
     )
     run_all.add_argument("--limit", type=int, default=None)
+    run_all.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop on first failed source instead of continuing.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -69,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
             except Exception as exc:  # noqa: BLE001 - CLI surface; continue across sources
                 print(f"{cls.source}: FAILED: {exc}", file=sys.stderr)
                 any_failure = True
+                if args.fail_fast:
+                    return 1
                 continue
             print(f"{cls.source}: {_format_stats(stats)}")
         return 1 if any_failure else 0

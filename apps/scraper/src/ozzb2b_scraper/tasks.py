@@ -7,9 +7,9 @@ periodic crawls without extra wiring. Workers still respond to ad-hoc calls.
 from __future__ import annotations
 
 import os
-from datetime import timedelta
 
 from celery import Celery
+from celery.schedules import crontab
 
 from ozzb2b_scraper.pipeline import run_spider_sync
 from ozzb2b_scraper.spiders import (
@@ -17,6 +17,7 @@ from ozzb2b_scraper.spiders import (
     DemoDirectorySpider,
     RuBusinessServicesSeedSpider,
     RuOutsourcingSeedSpider,
+    RuRegionalItSeedSpider,
 )
 
 REDIS_URL = os.environ.get("OZZB2B_REDIS_URL", "redis://localhost:6380/0")
@@ -36,14 +37,20 @@ app.conf.update(
     beat_schedule={
         "refresh-ru-outsourcing-daily": {
             "task": "ozzb2b.scraper.crawl_source",
-            "schedule": timedelta(hours=24),
+            "schedule": crontab(minute=0, hour=2),
             "args": (RuOutsourcingSeedSpider.source,),
             "options": {"queue": "scraper"},
         },
         "refresh-ru-business-services-daily": {
             "task": "ozzb2b.scraper.crawl_source",
-            "schedule": timedelta(hours=24),
+            "schedule": crontab(minute=20, hour=2),
             "args": (RuBusinessServicesSeedSpider.source,),
+            "options": {"queue": "scraper"},
+        },
+        "refresh-ru-regional-it-daily": {
+            "task": "ozzb2b.scraper.crawl_source",
+            "schedule": crontab(minute=40, hour=2),
+            "args": (RuRegionalItSeedSpider.source,),
             "options": {"queue": "scraper"},
         },
     },
@@ -95,3 +102,12 @@ def crawl_all(limit: int | None = None) -> dict[str, object]:
             }
         )
     return results
+
+
+@app.task(name="ozzb2b.scraper.list_sources")
+def list_sources() -> dict[str, object]:
+    """Return all known source slugs so admin UI/API can validate inputs."""
+    return {
+        "status": "ok",
+        "sources": sorted([cls.source for cls in ALL_SPIDERS if cls is not DemoDirectorySpider]),
+    }

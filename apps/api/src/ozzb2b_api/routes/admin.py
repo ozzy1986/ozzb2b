@@ -41,6 +41,14 @@ class ScrapeTriggerResponse(BaseModel):
     source_slug: str
 
 
+class ScrapeAllTriggerRequest(BaseModel):
+    limit: int | None = Field(default=None, ge=1, le=1000)
+
+
+class ScrapeAllTriggerResponse(BaseModel):
+    task_id: str
+
+
 @router.post(
     "/scrape",
     response_model=ScrapeTriggerResponse,
@@ -56,6 +64,20 @@ async def trigger_scrape(
         args=[payload.source_slug, payload.limit],
     )
     return ScrapeTriggerResponse(task_id=result.id, source_slug=payload.source_slug)
+
+
+@router.post(
+    "/scrape/all",
+    response_model=ScrapeAllTriggerResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_scrape_all(
+    payload: ScrapeAllTriggerRequest,
+    _admin: Annotated[User, Depends(_require_admin)],
+) -> ScrapeAllTriggerResponse:
+    c = _celery_client()
+    result = c.send_task("ozzb2b.scraper.crawl_all", args=[payload.limit])
+    return ScrapeAllTriggerResponse(task_id=result.id)
 
 
 class AnalyticsSummaryItem(BaseModel):
