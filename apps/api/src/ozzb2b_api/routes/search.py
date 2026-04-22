@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
+from ozzb2b_api.clients.events import EVENT_SEARCH_PERFORMED, get_event_emitter
 from ozzb2b_api.db.models import Provider
 from ozzb2b_api.routes.deps import DbSession
 from ozzb2b_api.schemas.catalog import (
@@ -67,6 +69,7 @@ async def search_endpoint(
         limit=limit,
         offset=offset,
     )
+    started = time.perf_counter()
     result = await search_service.search(db, query)
     providers = await search_service.hydrate_providers(
         db, [h.provider_id for h in result.hits]
@@ -78,6 +81,24 @@ async def search_endpoint(
         for h in result.hits
         if h.provider_id in provider_by_id
     ]
+    latency_ms = int((time.perf_counter() - started) * 1000)
+
+    await get_event_emitter().emit(
+        EVENT_SEARCH_PERFORMED,
+        properties={
+            "query": q,
+            "engine": result.engine,
+            "result_count": result.total,
+            "latency_ms": latency_ms,
+            "category_slugs": list(query.category_slugs),
+            "country_codes": list(query.country_codes),
+            "city_slugs": list(query.city_slugs),
+            "legal_form_codes": list(query.legal_form_codes),
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+
     return SearchResponse(
         total=result.total,
         limit=limit,

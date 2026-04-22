@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from ozzb2b_api.clients.events import EVENT_PROVIDER_VIEWED, get_event_emitter
 from ozzb2b_api.db.models import Provider
 from ozzb2b_api.routes.deps import DbSession
 from ozzb2b_api.schemas.catalog import (
@@ -117,6 +118,17 @@ async def get_provider_endpoint(slug: str, db: DbSession) -> ProviderDetail:
     provider = await catalog_service.get_provider_by_slug(db, slug)
     if provider is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "provider not found")
+    await get_event_emitter().emit(
+        EVENT_PROVIDER_VIEWED,
+        properties={
+            "provider_id": str(provider.id),
+            "slug": provider.slug,
+            "display_name": provider.display_name,
+            "country_code": provider.country.code if provider.country else None,
+            "city_slug": provider.city.slug if provider.city else None,
+            "category_slugs": [c.slug for c in provider.categories],
+        },
+    )
     return _to_detail(provider)
 
 

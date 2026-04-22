@@ -1,6 +1,5 @@
 """Admin-only routes.
 
-For now only exposes a trigger that enqueues a scraper task via Celery.
 Protected by a simple role check (admin only).
 """
 
@@ -9,12 +8,13 @@ from __future__ import annotations
 from typing import Annotated
 
 from celery import Celery
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from ozzb2b_api.config import get_settings
 from ozzb2b_api.db.models import User, UserRole
 from ozzb2b_api.routes.deps import get_current_user
+from ozzb2b_api.services import analytics as analytics_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -56,3 +56,81 @@ async def trigger_scrape(
         args=[payload.source_slug, payload.limit],
     )
     return ScrapeTriggerResponse(task_id=result.id, source_slug=payload.source_slug)
+
+
+class AnalyticsSummaryItem(BaseModel):
+    event_type: str
+    count: int
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    days: int
+    items: list[AnalyticsSummaryItem]
+
+
+class TopQueryItem(BaseModel):
+    query: str
+    count: int
+
+
+class TopQueriesResponse(BaseModel):
+    days: int
+    items: list[TopQueryItem]
+
+
+class TopProviderItem(BaseModel):
+    provider_id: str
+    display_name: str
+    slug: str
+    count: int
+
+
+class TopProvidersResponse(BaseModel):
+    days: int
+    items: list[TopProviderItem]
+
+
+@router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
+async def analytics_summary(
+    _admin: Annotated[User, Depends(_require_admin)],
+    days: Annotated[int, Query(ge=1, le=365)] = 7,
+) -> AnalyticsSummaryResponse:
+    rows = await analytics_service.event_type_counts(days=days)
+    return AnalyticsSummaryResponse(
+        days=days,
+        items=[AnalyticsSummaryItem(event_type=r.event_type, count=r.count) for r in rows],
+    )
+
+
+@router.get("/analytics/top-searches", response_model=TopQueriesResponse)
+async def analytics_top_searches(
+    _admin: Annotated[User, Depends(_require_admin)],
+    days: Annotated[int, Query(ge=1, le=365)] = 7,
+    limit: Annotated[int, Query(ge=1, le=200)] = 20,
+) -> TopQueriesResponse:
+    rows = await analytics_service.top_searches(days=days, limit=limit)
+    return TopQueriesResponse(
+        days=days,
+        items=[TopQueryItem(query=r.query, count=r.count) for r in rows],
+    )
+
+
+@router.get("/analytics/top-providers", response_model=TopProvidersResponse)
+async def analytics_top_providers(
+    _admin: Annotated[User, Depends(_require_admin)],
+    days: Annotated[int, Query(ge=1, le=365)] = 7,
+    limit: Annotated[int, Query(ge=1, le=200)] = 20,
+) -> TopProvidersResponse:
+    rows = await analytics_service.top_providers(days=days, limit=limit)
+    return TopProvidersResponse(
+        days=days,
+        items=[
+            TopProviderItem(
+                provider_id=r.provider_id,
+                display_name=r.display_name,
+                slug=r.slug,
+                count=r.count,
+            )
+            for r in rows
+        ],
+    )

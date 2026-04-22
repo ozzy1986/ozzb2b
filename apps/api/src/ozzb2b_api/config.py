@@ -46,6 +46,25 @@ class Settings(BaseSettings):
         description="Hard deadline for a single matcher.Rank call.",
     )
 
+    events_enabled: bool = Field(
+        default=False,
+        description="When true the API publishes product events to Redis Streams.",
+    )
+    events_stream_name: str = Field(default="ozzb2b:events:v1")
+    events_stream_maxlen: int = Field(
+        default=100_000,
+        description="Approximate cap for the Redis Stream (XADD MAXLEN ~).",
+    )
+
+    clickhouse_url: str = Field(
+        default="http://clickhouse:8123",
+        description="Base URL of the ClickHouse HTTP interface.",
+    )
+    clickhouse_user: str = Field(default="default")
+    clickhouse_password: str = Field(default="")
+    clickhouse_database: str = Field(default="ozzb2b")
+    clickhouse_timeout_ms: int = Field(default=2000)
+
     jwt_secret: str = Field(default="please_change_me_in_every_env")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_ttl_seconds: int = Field(default=15 * 60)

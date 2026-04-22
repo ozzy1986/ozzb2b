@@ -11,6 +11,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from ozzb2b_api.clients.events import (
+    EVENT_CHAT_MESSAGE_SENT,
+    EVENT_CHAT_STARTED,
+    get_event_emitter,
+)
 from ozzb2b_api.config import Settings, get_settings
 from ozzb2b_api.db.models import Provider, User
 from ozzb2b_api.routes.deps import DbSession, get_current_user
@@ -60,6 +65,15 @@ async def start_conversation(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     peer = await chat_service.get_conversation(
         db, viewer=current_user, conversation_id=conv.id
+    )
+    await get_event_emitter().emit(
+        EVENT_CHAT_STARTED,
+        user_id=current_user.id,
+        properties={
+            "conversation_id": str(peer.conversation.id),
+            "provider_id": str(peer.provider.id) if peer.provider else None,
+            "provider_slug": peer.provider.slug if peer.provider else None,
+        },
     )
     return ConversationPublic(
         id=peer.conversation.id,
@@ -175,6 +189,15 @@ async def send_message_endpoint(
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     except chat_service.ChatError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    await get_event_emitter().emit(
+        EVENT_CHAT_MESSAGE_SENT,
+        user_id=current_user.id,
+        properties={
+            "conversation_id": str(conversation_id),
+            "message_id": str(message.id),
+            "body_length": len(message.body),
+        },
+    )
     return MessagePublic.model_validate(message)
 
 
