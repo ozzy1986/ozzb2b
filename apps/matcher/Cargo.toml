@@ -1,6 +1,6 @@
 [package]
 name = "ozzb2b-matcher"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.80"
 description = "ozzb2b search/matching service"
@@ -10,12 +10,40 @@ name = "ozzb2b-matcher"
 path = "src/main.rs"
 
 [dependencies]
-tokio = { version = "1.41", features = ["rt-multi-thread", "macros", "signal", "net", "io-util"] }
-axum = { version = "0.7", default-features = false, features = ["http1", "json", "tokio"] }
+tokio = { version = "1.41", features = [
+    "rt-multi-thread",
+    "macros",
+    "signal",
+    "net",
+    "io-util",
+] }
+axum = { version = "0.7", default-features = false, features = [
+    "http1",
+    "json",
+    "tokio",
+] }
+tonic = { version = "0.12", default-features = false, features = [
+    "transport",
+    "codegen",
+    "prost",
+] }
+prost = "0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[build-dependencies]
+tonic-build = { version = "0.12", default-features = false, features = ["prost"] }
+
+[dev-dependencies]
+tokio = { version = "1.41", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+    "test-util",
+] }
 
 [profile.release]
 lto = "thin"

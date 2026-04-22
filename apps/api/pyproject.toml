@@ -20,6 +20,8 @@ dependencies = [
     "meilisearch>=0.32,<0.33",
     "python-slugify>=8.0,<9",
     "celery[redis]>=5.4,<6",
+    "grpcio>=1.67,<2",
+    "protobuf>=5.28,<7",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +34,7 @@ dev = [
     "ruff>=0.7,<0.8",
     "mypy>=1.13,<2",
     "types-python-slugify>=8,<9",
+    "grpcio-tools>=1.67,<2",
 ]
 
 [build-system]
@@ -52,6 +55,8 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Auto-generated protobuf/gRPC stubs are never edited by hand.
+extend-exclude = ["src/ozzb2b_api/grpc_gen"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC", "S", "N", "RUF"]
@@ -86,3 +91,15 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["celery", "celery.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["grpc", "grpc.*"]
+ignore_missing_imports = true
+
+# Generated code: no stubs, heavy dynamic attribute use. Treat as untyped so
+# call sites don't fight attr-defined / no-untyped-call on every rebuild.
+[[tool.mypy.overrides]]
+module = ["ozzb2b_api.grpc_gen", "ozzb2b_api.grpc_gen.*"]
+ignore_errors = true
+ignore_missing_imports = true
+follow_imports = "skip"

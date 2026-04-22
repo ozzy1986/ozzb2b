@@ -98,6 +98,10 @@ jobs:
         with:
           toolchain: "1.82"
           components: clippy, rustfmt
+      - name: protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler
       - name: fmt
         run: cargo fmt --check
       - name: clippy

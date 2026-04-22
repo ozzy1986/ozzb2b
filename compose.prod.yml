@@ -103,3 +103,21 @@ services:
       - "127.0.0.1:8090:8090"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  matcher:
+    image: ozzb2b-matcher:local
+    # Build context is the repo root because the shared protos live at `./proto`.
+    build:
+      context: .
+      dockerfile: apps/matcher/Dockerfile
+    container_name: ozzb2b-matcher
+    restart: unless-stopped
+    environment:
+      OZZB2B_MATCHER_HTTP_ADDR: "0.0.0.0:8090"
+      OZZB2B_MATCHER_GRPC_ADDR: "0.0.0.0:9090"
+      RUST_LOG: "info"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8090/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 6

@@ -4,6 +4,9 @@ package ozzb2b.matcher.v1;
 
 option go_package = "github.com/ozzy1986/ozzb2b/apps/matcher/gen/ozzb2b/matcher/v1;matcherv1";
 
+// MatcherService re-ranks a shortlist of provider candidates using a
+// lightweight hybrid score (term overlap + facet matching). The caller
+// (API) owns retrieval and hydration; the matcher is a stateless scorer.
 service MatcherService {
   rpc Rank(RankRequest) returns (RankResponse);
 }
@@ -16,11 +19,36 @@ message RankRequest {
   repeated string legal_form_codes = 5;
   int32 limit = 6;
   int32 offset = 7;
+
+  // Shortlist returned by the retrieval layer (Meilisearch / PG FTS).
+  // When empty the service returns an empty response — we never fabricate
+  // candidates on the matcher side.
+  repeated Candidate candidates = 8;
+}
+
+// Candidate carries only the fields relevant for scoring so the matcher can
+// stay schema-free. All strings are expected lowercased by the caller;
+// normalization is best-effort on the server side.
+message Candidate {
+  string provider_id = 1;
+  string display_name = 2;
+  string description = 3;
+  repeated string category_slugs = 4;
+  string country_code = 5;
+  string city_slug = 6;
+  string legal_form_code = 7;
+  // Retrieval score assigned by the search engine (higher = more relevant).
+  // The matcher blends this with its own score so it can act as a gentle
+  // re-ranker instead of a full replacement.
+  float retrieval_score = 8;
 }
 
 message ScoredProvider {
   string provider_id = 1;
+  // Final score combining retrieval + matcher signals (higher = more relevant).
   float score = 2;
+  // Raw matcher-side score, useful for debugging/evaluation.
+  float matcher_score = 3;
 }
 
 message RankResponse {

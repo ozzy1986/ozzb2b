@@ -30,6 +30,22 @@ class Settings(BaseSettings):
     meilisearch_url: str = Field(default="http://localhost:7700")
     meilisearch_key: str = Field(default="ozzb2b_dev_master_key_change_me")
 
+    matcher_enabled: bool = Field(
+        default=False,
+        description=(
+            "When true the /search endpoint re-ranks Meilisearch hits via "
+            "the Rust matcher."
+        ),
+    )
+    matcher_grpc_addr: str = Field(
+        default="matcher:9090",
+        description="host:port of the matcher gRPC service.",
+    )
+    matcher_timeout_ms: int = Field(
+        default=150,
+        description="Hard deadline for a single matcher.Rank call.",
+    )
+
     jwt_secret: str = Field(default="please_change_me_in_every_env")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_ttl_seconds: int = Field(default=15 * 60)

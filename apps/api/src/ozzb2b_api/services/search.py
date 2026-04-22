@@ -18,7 +18,14 @@ from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ozzb2b_api.clients.matcher import (
+    MatcherCandidate,
+    MatcherClient,
+    MatcherUnavailableError,
+    get_matcher_client,
+)
 from ozzb2b_api.clients.meilisearch import get_meilisearch
+from ozzb2b_api.config import get_settings
 from ozzb2b_api.db.models import (
     Category,
     City,
@@ -144,6 +151,85 @@ async def search(session: AsyncSession, q: SearchQuery) -> SearchResult:
     except Exception as exc:  # pragma: no cover - fallback path
         log.warning("search.meilisearch_fail", err=str(exc))
         return await PostgresFtsGateway().search(session, q)
+
+
+async def maybe_rerank(
+    q: SearchQuery,
+    result: SearchResult,
+    providers: list[Provider],
+    *,
+    client: MatcherClient | None = None,
+) -> SearchResult:
+    """Optionally re-rank `result.hits` using the matcher gRPC service.
+
+    The matcher is strictly optional: any failure leaves `result` untouched
+    and is logged at WARNING. Invariants preserved:
+    - Output `hits` is a permutation of a subset of input `hits`: no new ids
+      are introduced, so hydration keys stay valid upstream.
+    - `total` and `engine` semantics stay consistent; on success we annotate
+      `engine` with `+matcher` so the client can see the re-rank fired.
+    """
+    settings = get_settings()
+    if not settings.matcher_enabled:
+        return result
+    if not result.hits or not providers:
+        return result
+
+    current_scores = {h.provider_id: h.score for h in result.hits}
+    provider_by_id = {p.id: p for p in providers}
+    candidates: list[MatcherCandidate] = []
+    for hit in result.hits:
+        provider = provider_by_id.get(hit.provider_id)
+        if provider is None:
+            continue
+        candidates.append(
+            MatcherCandidate(
+                provider_id=provider.id,
+                display_name=provider.display_name or "",
+                description=provider.description or "",
+                category_slugs=tuple(c.slug for c in provider.categories),
+                country_code=provider.country.code if provider.country else "",
+                city_slug=provider.city.slug if provider.city else "",
+                legal_form_code=provider.legal_form.code if provider.legal_form else "",
+                retrieval_score=current_scores.get(provider.id, 0.0),
+            )
+        )
+    if not candidates:
+        return result
+
+    try:
+        scores = await (client or get_matcher_client()).rank(
+            query=q.q,
+            category_slugs=q.category_slugs,
+            country_codes=q.country_codes,
+            city_slugs=q.city_slugs,
+            legal_form_codes=q.legal_form_codes,
+            limit=len(candidates),
+            offset=0,
+            candidates=candidates,
+        )
+    except MatcherUnavailableError as exc:
+        log.warning("search.matcher_unavailable", err=str(exc))
+        return result
+
+    ranked_ids = [s.provider_id for s in scores]
+    score_by_id = {s.provider_id: s.score for s in scores}
+    hits_by_id = {h.provider_id: h for h in result.hits}
+    new_hits: list[SearchHit] = []
+    for pid in ranked_ids:
+        if pid not in hits_by_id:
+            continue
+        new_hits.append(SearchHit(provider_id=pid, score=float(score_by_id.get(pid, 0.0))))
+    # Append any hits the matcher dropped (defensive), preserving original order.
+    for hit in result.hits:
+        if hit.provider_id not in score_by_id:
+            new_hits.append(hit)
+
+    return SearchResult(
+        total=result.total,
+        hits=new_hits,
+        engine=f"{result.engine}+matcher",
+    )
 
 
 async def hydrate_providers(session: AsyncSession, ids: list[uuid.UUID]) -> list[Provider]:

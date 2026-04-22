@@ -68,11 +68,20 @@ async def search_endpoint(
         offset=offset,
     )
     result = await search_service.search(db, query)
-    providers = await search_service.hydrate_providers(db, [h.provider_id for h in result.hits])
+    providers = await search_service.hydrate_providers(
+        db, [h.provider_id for h in result.hits]
+    )
+    result = await search_service.maybe_rerank(query, result, providers)
+    provider_by_id = {p.id: p for p in providers}
+    ordered_providers = [
+        provider_by_id[h.provider_id]
+        for h in result.hits
+        if h.provider_id in provider_by_id
+    ]
     return SearchResponse(
         total=result.total,
         limit=limit,
         offset=offset,
         engine=result.engine,
-        items=[_to_summary(p) for p in providers],
+        items=[_to_summary(p) for p in ordered_providers],
     )

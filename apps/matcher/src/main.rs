@@ -1,12 +1,20 @@
-//! ozzb2b matcher service (Phase 3 target).
+//! ozzb2b matcher service entrypoint.
 //!
-//! Phase 0 exposes a minimal HTTP `/health` endpoint; the gRPC interface
-//! defined in `proto/ozzb2b/matcher/v1` will be added when the matching
-//! engine is implemented.
+//! Two surfaces are exposed:
+//!
+//! * HTTP `/health` and `/ready` on `OZZB2B_MATCHER_HTTP_ADDR` (default
+//!   `0.0.0.0:8090`) — used by Docker / Nginx / humans.
+//! * gRPC `MatcherService` on `OZZB2B_MATCHER_GRPC_ADDR` (default
+//!   `0.0.0.0:9090`) — the only business interface. The Python API is the
+//!   only client today.
+
+use std::net::SocketAddr;
 
 use axum::{routing::get, Json, Router};
+use ozzb2b_matcher::proto::matcher_v1::matcher_service_server::MatcherServiceServer;
+use ozzb2b_matcher::service::MatcherServer;
 use serde::Serialize;
-use std::net::SocketAddr;
+use tonic::transport::Server as GrpcServer;
 use tracing_subscriber::EnvFilter;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -26,7 +34,7 @@ async fn health() -> Json<Health> {
     })
 }
 
-fn app() -> Router {
+fn http_app() -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/ready", get(health))
@@ -41,16 +49,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
-    let addr: SocketAddr = std::env::var("OZZB2B_MATCHER_HTTP_ADDR")
+    let http_addr: SocketAddr = std::env::var("OZZB2B_MATCHER_HTTP_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:8090".to_string())
         .parse()?;
+    let grpc_addr: SocketAddr = std::env::var("OZZB2B_MATCHER_GRPC_ADDR")
+        .unwrap_or_else(|_| "0.0.0.0:9090".to_string())
+        .parse()?;
 
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    tracing::info!(addr = %addr, version = VERSION, "matcher.start");
+    tracing::info!(
+        http = %http_addr,
+        grpc = %grpc_addr,
+        version = VERSION,
+        "matcher.start"
+    );
 
-    axum::serve(listener, app())
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    let http_listener = tokio::net::TcpListener::bind(http_addr).await?;
+    let http_future = axum::serve(http_listener, http_app())
+        .with_graceful_shutdown(shutdown_signal());
+
+    let grpc_future = GrpcServer::builder()
+        .add_service(MatcherServiceServer::new(MatcherServer::default()))
+        .serve_with_shutdown(grpc_addr, shutdown_signal());
+
+    tokio::select! {
+        res = http_future => res?,
+        res = grpc_future => res?,
+    }
 
     tracing::info!("matcher.stop");
     Ok(())
