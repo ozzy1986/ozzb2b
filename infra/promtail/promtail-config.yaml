@@ -1,0 +1,46 @@
+# Promtail pulls Docker container logs from the host's
+# `/var/lib/docker/containers` JSON log files and forwards them to Loki.
+#
+# We only tail containers labelled `com.docker.compose.project=ozzb2b` so we
+# don't ingest every unrelated container on the VPS.
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /positions/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker-ozzb2b
+    pipeline_stages:
+      - cri: {}
+      - json:
+          expressions:
+            stream: stream
+            log: log
+            time: time
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+      - output:
+          source: log
+
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=ozzb2b"]
+
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: container
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: service
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_project"]
+        target_label: project

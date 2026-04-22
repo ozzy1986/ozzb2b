@@ -167,3 +167,96 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+
+  # ------------------ Phase 5.5: observability stack ------------------
+  # Prometheus scrapes the /metrics endpoints each service already exposes.
+  # Grafana ships with provisioned Prometheus + Loki datasources and the
+  # default `ozzb2b — overview` dashboard. Loki + Promtail aggregate docker
+  # logs of this compose project. Everything binds to 127.0.0.1 and is
+  # exposed to the world only via the nginx `grafana.ozzb2b.com` vhost.
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: ozzb2b-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=14d
+      - --storage.tsdb.retention.size=1GB
+      - --web.enable-lifecycle
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /var/www/ozzb2b.com/data/prometheus:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    mem_limit: 256m
+    mem_reservation: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: ozzb2b-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./infra/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - /var/www/ozzb2b.com/data/loki:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    mem_limit: 256m
+    mem_reservation: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3100/ready >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: ozzb2b-promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./infra/promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/www/ozzb2b.com/data/promtail:/positions
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    mem_limit: 96m
+    mem_reservation: 32m
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: ozzb2b-grafana
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      GF_SECURITY_ADMIN_USER: "${OZZB2B_GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${OZZB2B_GRAFANA_ADMIN_PASSWORD:-change_me_in_prod}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: "https://grafana.ozzb2b.com"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - /var/www/ozzb2b.com/data/grafana:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    mem_limit: 192m
+    mem_reservation: 96m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10

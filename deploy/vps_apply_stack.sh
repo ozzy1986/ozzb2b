@@ -55,6 +55,10 @@ OZZB2B_RATE_LIMIT_REFRESH_MAX=30
 OZZB2B_RATE_LIMIT_WINDOW_SECONDS=300
 
 NEXT_PUBLIC_OZZB2B_API_URL=https://api.ozzb2b.com
+
+# Phase 5.5 observability (Grafana admin login)
+OZZB2B_GRAFANA_ADMIN_USER=${OZZB2B_GRAFANA_ADMIN_USER:-admin}
+OZZB2B_GRAFANA_ADMIN_PASSWORD=${OZZB2B_GRAFANA_ADMIN_PASSWORD:-change_me_in_prod}
 EOF
 chmod 600 .env.prod
 
@@ -65,6 +69,15 @@ install -m 0644 infra/nginx/api.ozzb2b.com.conf /etc/nginx/sites-available/api.o
 install -m 0644 infra/nginx/ozzb2b.com.conf     /etc/nginx/sites-available/ozzb2b.com
 ln -sf /etc/nginx/sites-available/api.ozzb2b.com /etc/nginx/sites-enabled/api.ozzb2b.com
 ln -sf /etc/nginx/sites-available/ozzb2b.com     /etc/nginx/sites-enabled/ozzb2b.com
+# Grafana vhost only enabled when its Let's Encrypt cert already exists;
+# certbot must be run manually the first time (deploy/vps_grafana_ssl.sh).
+if [ -f /etc/letsencrypt/live/grafana.ozzb2b.com/fullchain.pem ]; then
+    install -m 0644 infra/nginx/grafana.ozzb2b.com.conf /etc/nginx/sites-available/grafana.ozzb2b.com
+    ln -sf /etc/nginx/sites-available/grafana.ozzb2b.com /etc/nginx/sites-enabled/grafana.ozzb2b.com
+    log "grafana vhost enabled"
+else
+    log "grafana vhost skipped (no SSL cert yet; run deploy/vps_grafana_ssl.sh)"
+fi
 # Clean up any stray .conf variant we might have created on earlier attempts.
 rm -f /etc/nginx/sites-available/api.ozzb2b.com.conf /etc/nginx/sites-enabled/api.ozzb2b.com.conf
 rm -f /etc/nginx/sites-available/ozzb2b.com.conf     /etc/nginx/sites-enabled/ozzb2b.com.conf
