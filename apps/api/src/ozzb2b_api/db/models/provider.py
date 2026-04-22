@@ -80,7 +80,13 @@ class Provider(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_scraped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     status: Mapped[ProviderStatus] = mapped_column(
-        Enum(ProviderStatus, name="provider_status", native_enum=False, validate_strings=True),
+        Enum(
+            ProviderStatus,
+            name="provider_status",
+            native_enum=False,
+            validate_strings=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=ProviderStatus.PUBLISHED,
         index=True,

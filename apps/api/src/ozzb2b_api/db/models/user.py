@@ -29,7 +29,13 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role", native_enum=False, validate_strings=True),
+        Enum(
+            UserRole,
+            name="user_role",
+            native_enum=False,
+            validate_strings=True,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=UserRole.CLIENT,
     )
