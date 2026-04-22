@@ -14,8 +14,11 @@ import type {
 } from './types';
 
 const SERVER_API_URL = process.env.OZZB2B_API_URL ?? 'http://localhost:8001';
+// IMPORTANT: `NEXT_PUBLIC_*` values are injected at build time. If absent,
+// falling back to localhost breaks the production browser client (it will call
+// the visitor's own localhost). Use the public API domain as a safe fallback.
 const PUBLIC_API_URL =
-  process.env.NEXT_PUBLIC_OZZB2B_API_URL ?? SERVER_API_URL;
+  process.env.NEXT_PUBLIC_OZZB2B_API_URL ?? 'https://api.ozzb2b.com';
 
 function apiUrl(): string {
   return typeof window === 'undefined' ? SERVER_API_URL : PUBLIC_API_URL;
