@@ -66,3 +66,25 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  scraper:
+    image: ozzb2b-scraper:local
+    build:
+      context: ./apps/scraper
+      dockerfile: Dockerfile
+    container_name: ozzb2b-scraper
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      OZZB2B_ENV: production
+    command:
+      [
+        "celery",
+        "-A",
+        "ozzb2b_scraper.tasks",
+        "worker",
+        "--loglevel=INFO",
+        "--concurrency=1",
+      ]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

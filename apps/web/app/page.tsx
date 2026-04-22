@@ -1,46 +1,79 @@
-import { getApiHealth } from '@/lib/api';
+import Link from 'next/link';
+import { getCategoryTree, listProviders } from '@/lib/api';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function HomePage() {
-  const health = await getApiHealth();
+  const [tree, featured] = await Promise.all([
+    getCategoryTree().catch(() => []),
+    listProviders({ limit: 6 }).catch(() => ({ items: [], total: 0, limit: 6, offset: 0, facets: null })),
+  ]);
+
+  const topCategories = tree.filter((c) => c.parent_id === null);
 
   return (
-    <main
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-      }}
-    >
-      <section
-        style={{
-          maxWidth: 760,
-          width: '100%',
-          padding: 28,
-          border: '1px solid #334155',
-          borderRadius: 12,
-          background: '#111827',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-        }}
-      >
-        <h1 style={{ marginTop: 0, fontSize: 28, letterSpacing: -0.5 }}>
-          ozzb2b is online
-        </h1>
-        <p style={{ lineHeight: 1.6, margin: '8px 0 16px' }}>
-          B2B outsourcing marketplace — IT, accounting, legal. Scaffolded. More coming soon.
+    <>
+      <section className="hero">
+        <h1>Find a B2B partner you can trust</h1>
+        <p>
+          A curated marketplace of outsourcing providers — IT, accounting, legal, marketing, HR.
+          Browse verified companies, compare, and get in touch directly.
         </p>
-        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', margin: 0 }}>
-          <dt style={{ opacity: 0.7 }}>Web</dt>
-          <dd style={{ margin: 0 }}>Next.js SSR</dd>
-          <dt style={{ opacity: 0.7 }}>API status</dt>
-          <dd style={{ margin: 0 }}>
-            {health.ok ? `ok (v${health.version ?? '?'})` : `unreachable: ${health.error}`}
-          </dd>
-        </dl>
+        <form className="search-form" action="/providers" method="get">
+          <input
+            name="q"
+            placeholder="Search companies, services, technologies…"
+            aria-label="Search providers"
+          />
+          <button type="submit">Search</button>
+        </form>
       </section>
-    </main>
+
+      <div className="section-head">
+        <h2>Browse categories</h2>
+        <Link href="/categories">All categories →</Link>
+      </div>
+      <div className="grid grid-categories">
+        {topCategories.map((c) => (
+          <Link key={c.id} href={`/providers?category=${encodeURIComponent(c.slug)}`} className="card">
+            <h3>{c.name}</h3>
+            {c.description ? <p>{c.description}</p> : null}
+            <div className="meta">
+              {c.children.slice(0, 4).map((child) => (
+                <span key={child.id} className="chip">
+                  {child.name}
+                </span>
+              ))}
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="section-head">
+        <h2>Featured providers</h2>
+        <Link href="/providers">All providers →</Link>
+      </div>
+      {featured.items.length === 0 ? (
+        <div className="empty">No providers yet. Check back soon.</div>
+      ) : (
+        <div className="grid grid-providers">
+          {featured.items.map((p) => (
+            <Link key={p.id} href={`/providers/${p.slug}`} className="card">
+              <h3>{p.display_name}</h3>
+              {p.description ? <p>{p.description}</p> : null}
+              <div className="meta">
+                {p.country ? <span className="chip">{p.country.name}</span> : null}
+                {p.city ? <span className="chip">{p.city.name}</span> : null}
+                {p.categories.slice(0, 3).map((c) => (
+                  <span key={c.id} className="chip">
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

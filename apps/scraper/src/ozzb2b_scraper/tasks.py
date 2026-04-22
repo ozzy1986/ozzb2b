@@ -1,14 +1,13 @@
-"""Celery tasks for the ozzb2b scraper.
-
-Phase 0: declares the app, the health task, and placeholder task signatures
-that will be implemented in Phase 1 alongside real spiders.
-"""
+"""Celery tasks for the ozzb2b scraper."""
 
 from __future__ import annotations
 
 import os
 
 from celery import Celery
+
+from ozzb2b_scraper.pipeline import run_spider_sync
+from ozzb2b_scraper.spiders import DemoDirectorySpider
 
 REDIS_URL = os.environ.get("OZZB2B_REDIS_URL", "redis://localhost:6380/0")
 
@@ -29,11 +28,22 @@ app.conf.update(
 
 @app.task(name="ozzb2b.scraper.health")
 def health() -> dict[str, str]:
-    """Simple echo task used in readiness checks."""
     return {"status": "ok", "service": "ozzb2b-scraper"}
 
 
 @app.task(name="ozzb2b.scraper.crawl_source", bind=True, default_retry_delay=60, max_retries=3)
-def crawl_source(self, source_slug: str) -> dict[str, str]:  # noqa: ARG001 (bound task)
-    """Placeholder for Phase 1. Will enqueue a Scrapy spider for the given source."""
-    return {"status": "planned", "source_slug": source_slug}
+def crawl_source(self, source_slug: str, limit: int | None = None) -> dict[str, int | str]:
+    """Run a registered spider by its source slug."""
+    spider_map = {DemoDirectorySpider.source: DemoDirectorySpider()}
+    spider = spider_map.get(source_slug)
+    if spider is None:
+        return {"status": "unknown_source", "source_slug": source_slug}
+    stats = run_spider_sync(spider, limit=limit)
+    return {
+        "status": "ok",
+        "source_slug": source_slug,
+        "fetched": stats.fetched,
+        "inserted": stats.inserted,
+        "updated": stats.updated,
+        "merged_by_fuzzy": stats.merged_by_fuzzy,
+    }

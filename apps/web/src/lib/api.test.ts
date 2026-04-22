@@ -28,7 +28,7 @@ describe('getApiHealth', () => {
     );
     const result = await getApiHealth();
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain('500');
+    if (!result.ok) expect(result.error).toMatch(/500/);
   });
 
   it('returns ok=false on network error', async () => {
