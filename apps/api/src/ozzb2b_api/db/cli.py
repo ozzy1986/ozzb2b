@@ -17,10 +17,21 @@ from alembic.config import Config
 
 
 def _alembic_config() -> Config:
-    # alembic.ini sits at the repo/app root (/app in the container).
-    ini = Path(__file__).resolve().parents[3] / "alembic.ini"
-    cfg = Config(str(ini))
-    cfg.set_main_option("script_location", str(Path(__file__).resolve().parent / "migrations"))
+    """Build an Alembic Config that works both from the source tree and inside Docker.
+
+    We point `script_location` at the installed package to avoid relying on where
+    `alembic.ini` sits at runtime.
+    """
+    migrations_dir = Path(__file__).resolve().parent / "migrations"
+    # Prefer a local alembic.ini for logger config; fall back to a clean Config().
+    candidates = [
+        Path.cwd() / "alembic.ini",
+        Path(__file__).resolve().parents[3] / "alembic.ini",
+        Path("/app/alembic.ini"),
+    ]
+    ini_path = next((p for p in candidates if p.is_file()), None)
+    cfg = Config(str(ini_path)) if ini_path is not None else Config()
+    cfg.set_main_option("script_location", str(migrations_dir))
     return cfg
 
 
