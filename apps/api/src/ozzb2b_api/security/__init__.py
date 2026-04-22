@@ -5,8 +5,10 @@ from ozzb2b_api.security.tokens import (
     TokenError,
     create_access_token,
     create_refresh_token,
+    create_ws_chat_token,
     decode_access_token,
     decode_refresh_token,
+    decode_ws_chat_token,
     hash_refresh_token,
 )
 
@@ -14,8 +16,10 @@ __all__ = [
     "TokenError",
     "create_access_token",
     "create_refresh_token",
+    "create_ws_chat_token",
     "decode_access_token",
     "decode_refresh_token",
+    "decode_ws_chat_token",
     "hash_password",
     "hash_refresh_token",
     "verify_password",
