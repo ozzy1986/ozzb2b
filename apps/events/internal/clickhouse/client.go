@@ -99,6 +99,9 @@ func (c *Client) InsertRows(ctx context.Context, rows []Row) (int, error) {
 	q := url.Values{}
 	q.Set("database", c.database)
 	q.Set("query", "INSERT INTO events FORMAT JSONEachRow")
+	// The API emits ISO-8601 timestamps with a `+00:00` offset, which CH's
+	// default DateTime64 parser rejects. `best_effort` handles them.
+	q.Set("date_time_input_format", "best_effort")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/?"+q.Encode(), &buf)
 	if err != nil {

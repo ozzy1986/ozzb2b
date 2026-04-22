@@ -61,6 +61,9 @@ func TestInsertRowsSendsJSONEachRow(t *testing.T) {
 	if !strings.Contains(gotQuery, "query=INSERT") {
 		t.Fatalf("missing query param: %s", gotQuery)
 	}
+	if !strings.Contains(gotQuery, "date_time_input_format=best_effort") {
+		t.Fatalf("expected best_effort datetime setting, got: %s", gotQuery)
+	}
 	// Body must be newline-delimited JSON objects.
 	lines := bytes.Split(bytes.TrimRight(gotBody, "\n"), []byte("\n"))
 	if len(lines) != 2 {
