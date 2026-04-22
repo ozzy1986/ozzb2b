@@ -20,6 +20,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/clickhouse"
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/config"
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/pipeline"
@@ -84,6 +86,7 @@ func main() {
 			Status: "ok", Service: "ozzb2b-events", Version: version,
 		})
 	})
+	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

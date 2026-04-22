@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/clickhouse"
+	"github.com/ozzy1986/ozzb2b/apps/events/internal/metrics"
 )
 
 // StreamMessage is a single Redis Stream entry after decoding.
@@ -80,6 +81,7 @@ func Run(ctx context.Context, r StreamReader, w Writer, cfg Config) error {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return err
 			}
+			metrics.ReadErrors.Inc()
 			log.Warn("events.read_failed", "err", err)
 			select {
 			case <-ctx.Done():
@@ -95,7 +97,9 @@ func Run(ctx context.Context, r StreamReader, w Writer, cfg Config) error {
 		rows, ids := convert(msgs, log)
 		if len(rows) == 0 {
 			// Nothing parseable — still ACK to drain the poison pill.
+			metrics.MalformedDropped.Add(float64(len(ids)))
 			if err := r.Ack(ctx, ids); err != nil {
+				metrics.AckErrors.Inc()
 				log.Warn("events.ack_failed", "err", err, "count", len(ids))
 			}
 			continue
@@ -103,15 +107,19 @@ func Run(ctx context.Context, r StreamReader, w Writer, cfg Config) error {
 
 		n, err := w.InsertRows(ctx, rows)
 		if err != nil {
+			metrics.InsertErrors.Inc()
 			log.Warn("events.insert_failed", "err", err, "rows", len(rows))
 			continue
 		}
 
 		if err := r.Ack(ctx, ids); err != nil {
+			metrics.AckErrors.Inc()
 			log.Warn("events.ack_failed", "err", err, "count", len(ids))
 			continue
 		}
 
+		metrics.BatchesInserted.Inc()
+		metrics.RowsInserted.Add(float64(n))
 		log.Info("events.batch_inserted", "rows", n, "ids", len(ids))
 	}
 }

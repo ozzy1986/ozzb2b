@@ -10,7 +10,8 @@
 
 use std::net::SocketAddr;
 
-use axum::{routing::get, Json, Router};
+use axum::{http::header, response::IntoResponse, routing::get, Json, Router};
+use ozzb2b_matcher::metrics;
 use ozzb2b_matcher::proto::matcher_v1::matcher_service_server::MatcherServiceServer;
 use ozzb2b_matcher::service::MatcherServer;
 use serde::Serialize;
@@ -34,10 +35,28 @@ async fn health() -> Json<Health> {
     })
 }
 
+async fn metrics_handler() -> impl IntoResponse {
+    match metrics::global().encode_text() {
+        Ok(body) => (
+            axum::http::StatusCode::OK,
+            [(header::CONTENT_TYPE, "text/plain; version=0.0.4")],
+            body,
+        )
+            .into_response(),
+        Err(err) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            format!("encode error: {err}"),
+        )
+            .into_response(),
+    }
+}
+
 fn http_app() -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/ready", get(health))
+        .route("/metrics", get(metrics_handler))
 }
 
 #[tokio::main]

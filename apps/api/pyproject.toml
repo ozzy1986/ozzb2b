@@ -22,6 +22,7 @@ dependencies = [
     "celery[redis]>=5.4,<6",
     "grpcio>=1.67,<2",
     "protobuf>=5.28,<7",
+    "prometheus-client>=0.21,<1",
 ]
 
 [project.optional-dependencies]
@@ -94,6 +95,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["grpc", "grpc.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["prometheus_client", "prometheus_client.*"]
 ignore_missing_imports = true
 
 # Generated code: no stubs, heavy dynamic attribute use. Treat as untyped so

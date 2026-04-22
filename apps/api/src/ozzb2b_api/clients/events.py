@@ -28,6 +28,7 @@ from redis.asyncio import Redis
 
 from ozzb2b_api.clients.redis import get_redis
 from ozzb2b_api.config import Settings, get_settings
+from ozzb2b_api.observability.metrics import events_published_total
 
 log = structlog.get_logger("ozzb2b_api.clients.events")
 
@@ -90,11 +91,14 @@ class EventEmitter:
                 approximate=True,
             )
         except Exception as exc:  # pragma: no cover - best effort
+            events_published_total.labels(event_type, "error").inc()
             log.warning(
                 "events.publish_failed",
                 err=str(exc),
                 event_type=event_type,
             )
+            return
+        events_published_total.labels(event_type, "ok").inc()
 
 
 _emitter: EventEmitter | None = None

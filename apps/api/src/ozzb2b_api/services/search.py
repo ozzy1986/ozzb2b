@@ -35,6 +35,7 @@ from ozzb2b_api.db.models import (
     ProviderCategory,
     ProviderStatus,
 )
+from ozzb2b_api.observability.metrics import matcher_calls_total
 
 log = structlog.get_logger("ozzb2b_api.services.search")
 
@@ -209,8 +210,10 @@ async def maybe_rerank(
             candidates=candidates,
         )
     except MatcherUnavailableError as exc:
+        matcher_calls_total.labels("unavailable").inc()
         log.warning("search.matcher_unavailable", err=str(exc))
         return result
+    matcher_calls_total.labels("ok").inc()
 
     ranked_ids = [s.provider_id for s in scores]
     score_by_id = {s.provider_id: s.score for s in scores}

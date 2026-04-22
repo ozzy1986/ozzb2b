@@ -19,8 +19,10 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
 	"github.com/ozzy1986/ozzb2b/apps/chat/internal/authz"
 	"github.com/ozzy1986/ozzb2b/apps/chat/internal/config"
+	"github.com/ozzy1986/ozzb2b/apps/chat/internal/metrics"
 	"github.com/ozzy1986/ozzb2b/apps/chat/internal/pubsub"
 )
 
@@ -73,6 +75,7 @@ func (h *Handler) websocket(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	claims, err := h.Verifier.Parse(token)
 	if err != nil {
+		metrics.WSConnections.WithLabelValues("auth_failed").Inc()
 		h.Logger.Info("ws.auth_failed", "err", err)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -82,9 +85,11 @@ func (h *Handler) websocket(w http.ResponseWriter, r *http.Request) {
 		OriginPatterns: h.Cfg.AllowedOrigins,
 	})
 	if err != nil {
+		metrics.WSConnections.WithLabelValues("accept_failed").Inc()
 		h.Logger.Info("ws.accept_failed", "err", err)
 		return
 	}
+	metrics.WSConnections.WithLabelValues("open").Inc()
 	defer conn.Close(websocket.StatusNormalClosure, "bye")
 
 	// Tight bound on any client-sent frame — defense-in-depth, we never expect
@@ -105,6 +110,7 @@ func (h *Handler) websocket(w http.ResponseWriter, r *http.Request) {
 	channel := "chat:conv:" + claims.ConversationID
 	sub, err := h.PubSub.Subscribe(ctx, channel)
 	if err != nil {
+		metrics.RedisSubscribeErrors.Inc()
 		h.Logger.Error("ws.subscribe_failed", "err", err, "channel", channel)
 		return
 	}
@@ -156,6 +162,7 @@ func (h *Handler) websocket(w http.ResponseWriter, r *http.Request) {
 				h.Logger.Info("ws.write_failed", "err", err)
 				return
 			}
+			metrics.WSMessagesForwarded.Inc()
 		}
 	}
 }

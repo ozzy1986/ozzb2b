@@ -9,5 +9,6 @@ pub mod proto {
     }
 }
 
+pub mod metrics;
 pub mod scoring;
 pub mod service;

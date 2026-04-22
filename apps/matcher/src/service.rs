@@ -1,7 +1,10 @@
 //! tonic service implementation for `MatcherService`.
 
+use std::time::Instant;
+
 use tonic::{Request, Response, Status};
 
+use crate::metrics;
 use crate::proto::matcher_v1::{matcher_service_server::MatcherService, RankRequest, RankResponse};
 use crate::scoring::{rank, Weights};
 
@@ -25,17 +28,36 @@ impl MatcherServer {
 #[tonic::async_trait]
 impl MatcherService for MatcherServer {
     async fn rank(&self, request: Request<RankRequest>) -> Result<Response<RankResponse>, Status> {
+        let started = Instant::now();
+        let m = metrics::global();
         let req = request.into_inner();
 
         if req.query.chars().count() > MAX_QUERY_CHARS {
+            m.rank_calls.with_label_values(&["invalid"]).inc();
+            m.rank_latency
+                .with_label_values(&["invalid"])
+                .observe(started.elapsed().as_secs_f64());
             return Err(Status::invalid_argument("query too long"));
         }
         if req.candidates.len() > MAX_CANDIDATES {
+            m.rank_calls.with_label_values(&["invalid"]).inc();
+            m.rank_latency
+                .with_label_values(&["invalid"])
+                .observe(started.elapsed().as_secs_f64());
             return Err(Status::invalid_argument("too many candidates"));
         }
 
         let total = req.candidates.len() as i32;
+        let candidate_count = req.candidates.len() as u64;
         let ranked = rank(&req, &self.weights);
+
+        m.rank_calls.with_label_values(&["ok"]).inc();
+        m.rank_candidates
+            .with_label_values(&["ok"])
+            .inc_by(candidate_count);
+        m.rank_latency
+            .with_label_values(&["ok"])
+            .observe(started.elapsed().as_secs_f64());
 
         Ok(Response::new(RankResponse {
             providers: ranked,

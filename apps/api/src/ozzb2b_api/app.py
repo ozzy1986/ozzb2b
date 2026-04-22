@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from ozzb2b_api import __version__
 from ozzb2b_api.config import Settings, get_settings
 from ozzb2b_api.logging import configure_logging, get_logger
+from ozzb2b_api.observability.metrics import PrometheusMiddleware, metrics_response
+from ozzb2b_api.observability.security_headers import SecurityHeadersMiddleware
 from ozzb2b_api.routes import admin, auth, catalog, chat, health, search
 
 
@@ -41,6 +43,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Metrics middleware must stay outermost (wrap-closest-to-request) so
+    # every downstream error is still counted.
+    app.add_middleware(PrometheusMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware, settings=cfg)
 
     app.include_router(health.router)
     app.include_router(auth.router)
@@ -48,6 +54,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(search.router)
     app.include_router(admin.router)
     app.include_router(chat.router)
+
+    @app.get("/metrics", include_in_schema=False)
+    def _metrics() -> object:
+        return metrics_response()
 
     return app
 

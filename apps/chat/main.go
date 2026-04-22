@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/ozzy1986/ozzb2b/apps/chat/internal/authz"
 	"github.com/ozzy1986/ozzb2b/apps/chat/internal/config"
 	"github.com/ozzy1986/ozzb2b/apps/chat/internal/gateway"
@@ -57,6 +59,7 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	handler.Register(mux)
+	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

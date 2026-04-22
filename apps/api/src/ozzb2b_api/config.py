@@ -65,6 +65,17 @@ class Settings(BaseSettings):
     clickhouse_database: str = Field(default="ozzb2b")
     clickhouse_timeout_ms: int = Field(default=2000)
 
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="When true the auth endpoints are protected by a Redis fixed-window limiter.",
+    )
+    rate_limit_login_max: int = Field(default=10, description="Login attempts per window.")
+    rate_limit_register_max: int = Field(default=5, description="Registrations per window.")
+    rate_limit_refresh_max: int = Field(default=30, description="Token refreshes per window.")
+    rate_limit_window_seconds: int = Field(default=300)
+
+    hsts_max_age_seconds: int = Field(default=15_552_000)
+
     jwt_secret: str = Field(default="please_change_me_in_every_env")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_ttl_seconds: int = Field(default=15 * 60)

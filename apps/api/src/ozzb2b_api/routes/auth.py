@@ -7,8 +7,10 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 
+from ozzb2b_api.clients.redis import get_redis
 from ozzb2b_api.config import get_settings
 from ozzb2b_api.db.models import User
+from ozzb2b_api.observability.metrics import auth_rate_limit_blocked_total
 from ozzb2b_api.routes.deps import DbSession, get_current_user
 from ozzb2b_api.schemas.auth import (
     LoginRequest,
@@ -16,6 +18,7 @@ from ozzb2b_api.schemas.auth import (
     TokenResponse,
     UserPublic,
 )
+from ozzb2b_api.security.rate_limit import RateLimiter, client_ip
 from ozzb2b_api.services import auth as auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -23,6 +26,44 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 REFRESH_COOKIE = "ozzb2b_rt"
 ACCESS_COOKIE = "ozzb2b_at"
+
+
+def _request_headers(request: Request) -> dict[str, str]:
+    return {k.lower(): v for k, v in request.headers.items()}
+
+
+async def _enforce_rate_limit(
+    *,
+    request: Request,
+    response: Response,
+    endpoint: str,
+    scope_key: str | None,
+    limit: int,
+) -> None:
+    cfg = get_settings()
+    if not cfg.rate_limit_enabled or limit <= 0:
+        return
+    limiter = RateLimiter(redis=get_redis(), window_seconds=cfg.rate_limit_window_seconds)
+    ip = client_ip(_request_headers(request), request.client.host if request.client else None)
+
+    # Always throttle by IP; additionally throttle by the supplied scope
+    # (e.g. email) so a single attacker can't burn through many accounts
+    # from rotating addresses.
+    for scope_name, scope_value in (("ip", ip), ("scope", scope_key)):
+        if not scope_value:
+            continue
+        outcome = await limiter.hit(
+            endpoint=endpoint,
+            scope=f"{scope_name}:{scope_value}",
+            limit=limit,
+        )
+        if not outcome.allowed:
+            auth_rate_limit_blocked_total.labels(endpoint, scope_name).inc()
+            response.headers["Retry-After"] = str(outcome.retry_after_seconds)
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                "слишком много попыток, попробуйте позже",
+            )
 
 
 def _set_auth_cookies(
@@ -71,6 +112,14 @@ async def register(
     response: Response,
     db: DbSession,
 ) -> TokenResponse:
+    cfg = get_settings()
+    await _enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="register",
+        scope_key=payload.email.lower(),
+        limit=cfg.rate_limit_register_max,
+    )
     try:
         user = await auth_service.register(
             db,
@@ -107,6 +156,14 @@ async def login(
     response: Response,
     db: DbSession,
 ) -> TokenResponse:
+    cfg = get_settings()
+    await _enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="login",
+        scope_key=payload.email.lower(),
+        limit=cfg.rate_limit_login_max,
+    )
     try:
         user = await auth_service.authenticate(db, email=payload.email, password=payload.password)
     except auth_service.InvalidCredentialsError as exc:
@@ -138,6 +195,14 @@ async def refresh(
     db: DbSession,
     refresh_cookie: Annotated[str | None, Cookie(alias=REFRESH_COOKIE)] = None,
 ) -> TokenResponse:
+    cfg = get_settings()
+    await _enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="refresh",
+        scope_key=None,
+        limit=cfg.rate_limit_refresh_max,
+    )
     if not refresh_cookie:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing refresh token")
     try:
