@@ -36,6 +36,33 @@ export class ApiError extends Error {
   }
 }
 
+function toApiDetail(raw: unknown, fallback: string): string {
+  if (typeof raw === 'string' && raw.trim()) return raw;
+  if (Array.isArray(raw)) {
+    const parts = raw
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          const obj = item as { loc?: unknown; msg?: unknown };
+          const msg = typeof obj.msg === 'string' ? obj.msg : null;
+          if (!msg) return null;
+          if (Array.isArray(obj.loc)) {
+            const field = obj.loc
+              .map((v) => (typeof v === 'string' ? v : null))
+              .filter(Boolean)
+              .join('.');
+            if (field) return `${field}: ${msg}`;
+          }
+          return msg;
+        }
+        return null;
+      })
+      .filter((v): v is string => Boolean(v));
+    if (parts.length > 0) return parts.join('; ');
+  }
+  return fallback;
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${apiUrl()}${path}`, {
     credentials: 'include',
@@ -50,8 +77,8 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let detail = `${res.status}`;
     try {
-      const body = (await res.json()) as { detail?: string };
-      if (body?.detail) detail = body.detail;
+      const body = (await res.json()) as { detail?: unknown };
+      detail = toApiDetail(body?.detail, detail);
     } catch {
       // keep status-only detail
     }

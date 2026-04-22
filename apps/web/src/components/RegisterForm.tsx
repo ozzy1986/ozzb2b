@@ -8,7 +8,16 @@ import { ApiError, register } from '@/lib/api';
 function toErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 409) return 'Пользователь с таким email уже существует.';
-    if (err.status === 422) return 'Проверьте корректность данных.';
+    if (err.status === 422) {
+      const detail = err.detail.toLowerCase();
+      if (detail.includes('password')) {
+        return 'Пароль должен быть не короче 10 символов.';
+      }
+      if (detail.includes('email')) {
+        return 'Проверьте корректность email.';
+      }
+      return `Проверьте корректность данных: ${err.detail}`;
+    }
     return err.detail || 'Не удалось создать аккаунт.';
   }
   return 'Сеть недоступна. Попробуйте ещё раз.';
@@ -73,12 +82,13 @@ export function RegisterForm() {
           type="password"
           name="password"
           required
-          minLength={8}
+          minLength={10}
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
+      <div className="auth-hint">Минимальная длина пароля: 10 символов.</div>
       {error ? <div className="auth-error">{error}</div> : null}
       <button type="submit" disabled={pending}>
         {pending ? 'Создаём...' : 'Зарегистрироваться'}
