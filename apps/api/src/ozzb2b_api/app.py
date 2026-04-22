@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ozzb2b_api import __version__
 from ozzb2b_api.config import Settings, get_settings
 from ozzb2b_api.logging import configure_logging, get_logger
-from ozzb2b_api.routes import health
+from ozzb2b_api.routes import auth, catalog, health
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -43,6 +43,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(catalog.router)
 
     return app
 

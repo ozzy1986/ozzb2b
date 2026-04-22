@@ -21,7 +21,7 @@ cat > .env.prod <<EOF
 OZZB2B_ENV=production
 
 OZZB2B_DATABASE_URL=postgresql+asyncpg://ozzb2b:${OZZB2B_DB_PASSWORD}@host.docker.internal:5432/ozzb2b
-OZZB2B_REDIS_URL=redis://host.docker.internal:6379/3
+OZZB2B_REDIS_URL=redis://:${OZZB2B_REDIS_PASSWORD}@host.docker.internal:6379/3
 
 OZZB2B_MEILISEARCH_URL=http://meilisearch:7700
 OZZB2B_MEILISEARCH_KEY=${OZZB2B_MEILISEARCH_KEY}
