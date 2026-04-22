@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { listProviders, searchProviders } from '@/lib/api';
 import type { ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/types';
 import { ProviderFilters } from '@/components/ProviderFilters';
-import { trCategory, trCountry } from '@/lib/ru';
+import { trCategory, trCity, trCountry } from '@/lib/ru';
 
 export const revalidate = 30;
 
@@ -129,7 +129,7 @@ export default async function ProvidersPage({
                     {p.country ? (
                       <span className="chip">{trCountry(p.country.code, p.country.name)}</span>
                     ) : null}
-                    {p.city ? <span className="chip">{p.city.name}</span> : null}
+                    {p.city ? <span className="chip">{trCity(p.city.name)}</span> : null}
                     {p.categories.slice(0, 3).map((c) => (
                       <span key={c.id} className="chip">
                         {trCategory(c.slug, c.name)}

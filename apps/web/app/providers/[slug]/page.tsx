@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProvider } from '@/lib/api';
 import type { ProviderDetail } from '@/lib/types';
-import { trCategory, trCountry, trLegalForm } from '@/lib/ru';
+import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
 
 export const revalidate = 60;
 
@@ -71,7 +71,7 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
             {p.country ? (
               <span className="chip">{trCountry(p.country.code, p.country.name)}</span>
             ) : null}
-            {p.city ? <span className="chip">{p.city.name}</span> : null}
+            {p.city ? <span className="chip">{trCity(p.city.name)}</span> : null}
             {p.legal_form ? (
               <span className="chip">{trLegalForm(p.legal_form.code, p.legal_form.name)}</span>
             ) : null}

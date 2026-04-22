@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 import type { FacetValue } from '@/lib/types';
-import { trCategory, trCountry, trLegalForm } from '@/lib/ru';
+import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
 
 type Props = {
   currentQ: string;
@@ -104,6 +104,8 @@ export function ProviderFilters(props: Props) {
                   ? trCategory(v.value, v.label)
                   : g.param === 'country'
                     ? trCountry(v.value.toUpperCase(), v.label)
+                    : g.param === 'city'
+                      ? trCity(v.label)
                     : g.param === 'legal_form'
                       ? trLegalForm(v.value.toUpperCase(), v.label)
                       : v.label;

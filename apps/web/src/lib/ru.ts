@@ -55,6 +55,23 @@ const LEGAL_FORM_RU: Record<string, string> = {
   SELF_EMPLOYED: 'Самозанятый',
 };
 
+const CITY_RU_BY_EN: Record<string, string> = {
+  Moscow: 'Москва',
+  'Saint Petersburg': 'Санкт-Петербург',
+  Novosibirsk: 'Новосибирск',
+  Yekaterinburg: 'Екатеринбург',
+  Kazan: 'Казань',
+  'Nizhny Novgorod': 'Нижний Новгород',
+  Samara: 'Самара',
+  Ulyanovsk: 'Ульяновск',
+  Voronezh: 'Воронеж',
+  Omsk: 'Омск',
+  Kirov: 'Киров',
+  Perm: 'Пермь',
+  'Rostov-on-Don': 'Ростов-на-Дону',
+  Krasnodar: 'Краснодар',
+};
+
 export function trCategory(slug: string, fallback: string): string {
   return CATEGORY_RU[slug] ?? fallback;
 }
@@ -71,4 +88,8 @@ export function trLegalForm(code: string | undefined, fallback: string): string 
 
 export function trCategoryDescription(slug: string, fallback: string | null): string | null {
   return CATEGORY_DESCRIPTION_RU[slug] ?? fallback;
+}
+
+export function trCity(name: string): string {
+  return CITY_RU_BY_EN[name] ?? name;
 }
