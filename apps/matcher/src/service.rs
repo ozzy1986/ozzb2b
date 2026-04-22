@@ -2,9 +2,7 @@
 
 use tonic::{Request, Response, Status};
 
-use crate::proto::matcher_v1::{
-    matcher_service_server::MatcherService, RankRequest, RankResponse,
-};
+use crate::proto::matcher_v1::{matcher_service_server::MatcherService, RankRequest, RankResponse};
 use crate::scoring::{rank, Weights};
 
 /// Request guardrails so a pathological caller cannot OOM the service. The
@@ -26,10 +24,7 @@ impl MatcherServer {
 
 #[tonic::async_trait]
 impl MatcherService for MatcherServer {
-    async fn rank(
-        &self,
-        request: Request<RankRequest>,
-    ) -> Result<Response<RankResponse>, Status> {
+    async fn rank(&self, request: Request<RankRequest>) -> Result<Response<RankResponse>, Status> {
         let req = request.into_inner();
 
         if req.query.chars().count() > MAX_QUERY_CHARS {

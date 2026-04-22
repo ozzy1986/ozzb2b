@@ -64,8 +64,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let http_listener = tokio::net::TcpListener::bind(http_addr).await?;
-    let http_future = axum::serve(http_listener, http_app())
-        .with_graceful_shutdown(shutdown_signal());
+    let http_future =
+        axum::serve(http_listener, http_app()).with_graceful_shutdown(shutdown_signal());
 
     let grpc_future = GrpcServer::builder()
         .add_service(MatcherServiceServer::new(MatcherServer::default()))

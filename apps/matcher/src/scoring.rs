@@ -148,13 +148,7 @@ pub fn rank(request: &RankRequest, weights: &Weights) -> Vec<ScoredProvider> {
 mod tests {
     use super::*;
 
-    fn cand(
-        id: &str,
-        name: &str,
-        description: &str,
-        cats: &[&str],
-        retrieval: f32,
-    ) -> Candidate {
+    fn cand(id: &str, name: &str, description: &str, cats: &[&str], retrieval: f32) -> Candidate {
         Candidate {
             provider_id: id.into(),
             display_name: name.into(),
