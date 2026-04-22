@@ -45,10 +45,22 @@ def seed() -> None:
     asyncio.run(_main())
 
 
+def reindex() -> None:
+    from ozzb2b_api.db.session import get_sessionmaker
+    from ozzb2b_api.services.indexer import reindex_all
+
+    async def _run() -> None:
+        sessionmaker = get_sessionmaker()
+        async with sessionmaker() as session:
+            await reindex_all(session)
+
+    asyncio.run(_run())
+
+
 def main(argv: list[str] | None = None) -> int:
     args = argv if argv is not None else sys.argv[1:]
     if not args:
-        print("usage: python -m ozzb2b_api.db.cli [migrate|seed]", file=sys.stderr)
+        print("usage: python -m ozzb2b_api.db.cli [migrate|seed|reindex]", file=sys.stderr)
         return 2
     cmd = args[0]
     if cmd == "migrate":
@@ -56,6 +68,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if cmd == "seed":
         seed()
+        return 0
+    if cmd == "reindex":
+        reindex()
         return 0
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 2

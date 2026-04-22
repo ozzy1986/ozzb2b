@@ -10,3 +10,6 @@ docker compose -f compose.prod.yml exec -T api python -m ozzb2b_api.db.cli migra
 
 echo "[migrate] seed"
 docker compose -f compose.prod.yml exec -T api python -m ozzb2b_api.db.cli seed
+
+echo "[migrate] reindex"
+docker compose -f compose.prod.yml exec -T api python -m ozzb2b_api.db.cli reindex
