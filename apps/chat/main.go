@@ -1,11 +1,13 @@
 // Package main is the entry point for the ozzb2b chat service.
-// It exposes a minimal health endpoint for now; the gRPC server and
-// WebSocket gateway will be added in Phase 2 as defined in proto/ozzb2b/chat/v1.
+//
+// The service exposes a read-only WebSocket gateway that forwards new chat
+// messages from Redis pub/sub to authenticated browsers. All persistence is
+// handled by the API: this binary stays intentionally small and stateless so
+// it can be horizontally scaled with zero coordination.
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -13,47 +15,65 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/ozzy1986/ozzb2b/apps/chat/internal/authz"
+	"github.com/ozzy1986/ozzb2b/apps/chat/internal/config"
+	"github.com/ozzy1986/ozzb2b/apps/chat/internal/gateway"
+	"github.com/ozzy1986/ozzb2b/apps/chat/internal/pubsub"
 )
 
-const version = "0.1.0"
-
-type healthResponse struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Version string `json:"version"`
-}
+const version = "0.2.0"
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
-	addr := os.Getenv("OZZB2B_CHAT_HTTP_ADDR")
-	if addr == "" {
-		addr = ":8080"
+	cfg, err := config.Load(version)
+	if err != nil {
+		logger.Error("chat.config_error", "err", err)
+		os.Exit(1)
 	}
 
+	verifier, err := authz.NewVerifier(cfg.JWTSecret, cfg.JWTAlgorithm)
+	if err != nil {
+		logger.Error("chat.verifier_error", "err", err)
+		os.Exit(1)
+	}
+
+	rf, err := pubsub.NewRedisFactory(cfg.RedisURL)
+	if err != nil {
+		logger.Error("chat.redis_error", "err", err)
+		os.Exit(1)
+	}
+	defer func() { _ = rf.Close() }()
+
+	handler := &gateway.Handler{
+		Cfg:       cfg,
+		Verifier:  verifier,
+		PubSub:    rf,
+		Logger:    logger,
+		NowFn:     time.Now,
+		ServiceID: "ozzb2b-chat",
+	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", Service: "ozzb2b-chat", Version: version})
-	})
-	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", Service: "ozzb2b-chat", Version: version})
-	})
+	handler.Register(mux)
 
 	srv := &http.Server{
-		Addr:              addr,
+		Addr:              cfg.HTTPAddr,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		// Keep read/write timeouts open enough for long-lived WebSockets:
+		// the per-frame deadlines are enforced inside the handler.
+		ReadTimeout:  0,
+		WriteTimeout: 0,
+		IdleTimeout:  cfg.IdleTimeout,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
-		logger.Info("chat.start", "addr", addr, "version", version)
+		logger.Info("chat.start", "addr", cfg.HTTPAddr, "version", version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("chat.listen_error", "err", err)
 			stop()
@@ -62,16 +82,9 @@ func main() {
 
 	<-ctx.Done()
 	logger.Info("chat.stop")
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("chat.shutdown_error", "err", err)
 	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
 }
