@@ -35,17 +35,39 @@ OZZB2B_JWT_REFRESH_TTL_SECONDS=2592000
 OZZB2B_CORS_ORIGINS=https://ozzb2b.com,https://www.ozzb2b.com,https://api.ozzb2b.com
 OZZB2B_LOG_LEVEL=INFO
 
+# Phase 3 matcher (feature-flagged, safe to leave enabled).
+OZZB2B_MATCHER_ENABLED=true
+OZZB2B_MATCHER_GRPC_ADDR=matcher:9090
+OZZB2B_MATCHER_TIMEOUT_MS=200
+
+# Phase 4 analytics pipeline (Redis Streams -> ClickHouse).
+OZZB2B_EVENTS_ENABLED=true
+OZZB2B_EVENTS_STREAM=ozzb2b:events:v1
+OZZB2B_CLICKHOUSE_URL=http://clickhouse:8123
+OZZB2B_CLICKHOUSE_DATABASE=ozzb2b
+OZZB2B_CLICKHOUSE_TIMEOUT_MS=2000
+
+# Phase 5 hardening.
+OZZB2B_RATE_LIMIT_ENABLED=true
+OZZB2B_RATE_LIMIT_LOGIN_MAX=10
+OZZB2B_RATE_LIMIT_REGISTER_MAX=5
+OZZB2B_RATE_LIMIT_REFRESH_MAX=30
+OZZB2B_RATE_LIMIT_WINDOW_SECONDS=300
+
 NEXT_PUBLIC_OZZB2B_API_URL=https://api.ozzb2b.com
 EOF
 chmod 600 .env.prod
 
 log "sync nginx vhosts"
-# Existing vhost file on the VPS is /etc/nginx/sites-{available,enabled}/api.ozzb2b.com
+# Existing vhost file on the VPS is /etc/nginx/sites-{available,enabled}/<host>
 # (no .conf suffix). Write to that exact path to avoid ending up with two vhosts.
 install -m 0644 infra/nginx/api.ozzb2b.com.conf /etc/nginx/sites-available/api.ozzb2b.com
+install -m 0644 infra/nginx/ozzb2b.com.conf     /etc/nginx/sites-available/ozzb2b.com
 ln -sf /etc/nginx/sites-available/api.ozzb2b.com /etc/nginx/sites-enabled/api.ozzb2b.com
+ln -sf /etc/nginx/sites-available/ozzb2b.com     /etc/nginx/sites-enabled/ozzb2b.com
 # Clean up any stray .conf variant we might have created on earlier attempts.
 rm -f /etc/nginx/sites-available/api.ozzb2b.com.conf /etc/nginx/sites-enabled/api.ozzb2b.com.conf
+rm -f /etc/nginx/sites-available/ozzb2b.com.conf     /etc/nginx/sites-enabled/ozzb2b.com.conf
 nginx -t && systemctl reload nginx
 
 log "docker compose up --build"
