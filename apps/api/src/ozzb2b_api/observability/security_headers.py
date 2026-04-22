@@ -8,23 +8,22 @@ in a browser.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-
 from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.types import ASGIApp
 
 from ozzb2b_api.config import Settings, get_settings
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: Callable[..., Awaitable[Response]], settings: Settings | None = None):
+    def __init__(self, app: ASGIApp, settings: Settings | None = None):
         super().__init__(app)
         self._settings = settings or get_settings()
 
     async def dispatch(
         self,
         request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
+        call_next: RequestResponseEndpoint,
     ) -> Response:
         response = await call_next(request)
         self._apply(response)
