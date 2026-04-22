@@ -6,6 +6,7 @@ import type { ProviderDetail } from '@/lib/types';
 import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
 import { ContactProviderButton } from '@/components/ContactProviderButton';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
+import { FreshnessBadge } from '@/components/FreshnessBadge';
 
 export const revalidate = 60;
 
@@ -93,6 +94,7 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
             ) : null}
             {p.year_founded ? <span className="chip">Основана в {p.year_founded}</span> : null}
             {p.employee_count_range ? <span className="chip">{p.employee_count_range} сотрудников</span> : null}
+            <FreshnessBadge lastScrapedAt={p.last_scraped_at} />
           </div>
         </div>
         <div>

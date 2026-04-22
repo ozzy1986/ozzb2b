@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 import asyncpg
 import structlog
@@ -30,6 +31,25 @@ class IngestionStats:
     inserted: int = 0
     updated: int = 0
     merged_by_fuzzy: int = 0
+    merged_by_domain: int = 0
+
+
+def normalize_host(url: str | None) -> str | None:
+    """Return a lowercase host without `www.` prefix, or None if not parsable.
+
+    Used as a dedup key: two providers with the same canonical homepage host
+    are almost certainly the same company even if display names differ slightly.
+    """
+    if not url:
+        return None
+    try:
+        host = urlsplit(url).hostname
+    except (ValueError, TypeError):
+        return None
+    if not host:
+        return None
+    host = host.lower()
+    return host.removeprefix("www.")
 
 
 def _to_asyncpg_dsn(url: str) -> str:
@@ -77,6 +97,33 @@ async def _find_existing_by_source(conn: asyncpg.Connection, source: str, source
         "SELECT id, slug FROM providers WHERE source = $1 AND source_id = $2",
         source,
         source_id,
+    )
+
+
+async def _find_existing_by_domain(
+    conn: asyncpg.Connection, website: str | None
+) -> asyncpg.Record | None:
+    """Match providers whose stored `website` resolves to the same host.
+
+    Strong, safe dedup signal: a shared homepage host is the single best
+    indicator that two scraped items describe the same company, across sources.
+    """
+    host = normalize_host(website)
+    if not host:
+        return None
+    return await conn.fetchrow(
+        """
+        SELECT id, slug FROM providers
+        WHERE website IS NOT NULL
+          AND (
+                website ILIKE $1
+             OR website ILIKE $2
+          )
+        ORDER BY last_scraped_at DESC NULLS LAST
+        LIMIT 1
+        """,
+        f"%://{host}/%",
+        f"%://www.{host}/%",
     )
 
 
@@ -131,6 +178,11 @@ async def _upsert_one(conn: asyncpg.Connection, item: ScrapedProvider) -> tuple[
 
     existing = await _find_existing_by_source(conn, item.source, item.source_id)
     action = "updated"
+    if existing is None:
+        by_domain = await _find_existing_by_domain(conn, item.website)
+        if by_domain is not None:
+            existing = by_domain
+            action = "merged_by_domain"
     if existing is None:
         fuzzy = await _find_existing_by_fuzzy(conn, item.display_name, country_id)
         if fuzzy and float(fuzzy["score"]) >= FUZZY_THRESHOLD:
@@ -250,13 +302,24 @@ async def run_spider(spider: Spider, *, limit: int | None = None) -> IngestionSt
                 stats.updated += 1
             elif action == "merged_by_fuzzy":
                 stats.merged_by_fuzzy += 1
+            elif action == "merged_by_domain":
+                stats.merged_by_domain += 1
     finally:
         await fetcher.close()
         await conn.close()
     log.info(
         "scraper.run.done",
         source=spider.source,
-        **{k: getattr(stats, k) for k in ("fetched", "inserted", "updated", "merged_by_fuzzy")},
+        **{
+            k: getattr(stats, k)
+            for k in (
+                "fetched",
+                "inserted",
+                "updated",
+                "merged_by_fuzzy",
+                "merged_by_domain",
+            )
+        },
     )
     return stats
 

@@ -41,6 +41,7 @@ def _to_summary(provider: Provider) -> ProviderSummary:
         employee_count_range=provider.employee_count_range,
         logo_url=provider.logo_url,
         categories=[CategoryPublic.model_validate(c) for c in provider.categories],
+        last_scraped_at=provider.last_scraped_at,
     )
 
 
@@ -58,7 +59,6 @@ def _to_detail(provider: Provider) -> ProviderDetail:
         source=provider.source,
         source_url=provider.source_url,
         status=provider.status.value,
-        last_scraped_at=provider.last_scraped_at,
         created_at=provider.created_at,
         updated_at=provider.updated_at,
     )

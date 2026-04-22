@@ -5,6 +5,7 @@ import type { ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/ty
 import { ProviderFilters } from '@/components/ProviderFilters';
 import { trCategory, trCity, trCountry } from '@/lib/ru';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
+import { FreshnessBadge } from '@/components/FreshnessBadge';
 
 export const revalidate = 30;
 
@@ -156,6 +157,7 @@ export default async function ProvidersPage({
                         {trCategory(c.slug, c.name)}
                       </span>
                     ))}
+                    <FreshnessBadge lastScrapedAt={p.last_scraped_at} />
                   </div>
                 </Link>
               ))}

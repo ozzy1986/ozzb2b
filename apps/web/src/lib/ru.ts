@@ -93,3 +93,35 @@ export function trCategoryDescription(slug: string, fallback: string | null): st
 export function trCity(name: string): string {
   return CITY_RU_BY_EN[name] ?? name;
 }
+
+/** Human-friendly "data freshness" label, e.g. "Обновлено 3 дня назад".
+ *
+ * Returns null when the input is null / unparseable so the UI can skip the
+ * badge entirely instead of showing "Invalid date".
+ */
+export function freshnessLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return null;
+  const diffMs = Date.now() - ts;
+  if (diffMs < 0) return null;
+  const minutes = Math.floor(diffMs / 60_000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (minutes < 1) return 'Обновлено только что';
+  if (minutes < 60) return `Обновлено ${minutes} ${plural(minutes, ['минуту', 'минуты', 'минут'])} назад`;
+  if (hours < 24) return `Обновлено ${hours} ${plural(hours, ['час', 'часа', 'часов'])} назад`;
+  if (days < 30) return `Обновлено ${days} ${plural(days, ['день', 'дня', 'дней'])} назад`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `Обновлено ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])} назад`;
+  const years = Math.floor(months / 12);
+  return `Обновлено ${years} ${plural(years, ['год', 'года', 'лет'])} назад`;
+}
+
+function plural(n: number, forms: [string, string, string]): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1];
+  return forms[2];
+}

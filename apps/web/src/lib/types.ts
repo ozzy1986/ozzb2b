@@ -25,6 +25,7 @@ export type ProviderSummary = {
   employee_count_range: string | null;
   logo_url: string | null;
   categories: Category[];
+  last_scraped_at: string | null;
 };
 
 export type ProviderDetail = ProviderSummary & {
@@ -38,7 +39,6 @@ export type ProviderDetail = ProviderSummary & {
   source: string | null;
   source_url: string | null;
   status: string;
-  last_scraped_at: string | null;
   created_at: string;
   updated_at: string;
 };

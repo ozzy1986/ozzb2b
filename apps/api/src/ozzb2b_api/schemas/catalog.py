@@ -64,6 +64,7 @@ class ProviderSummary(BaseModel):
     employee_count_range: str | None
     logo_url: str | None
     categories: list[CategoryPublic]
+    last_scraped_at: datetime | None = None
 
 
 class ProviderDetail(ProviderSummary):

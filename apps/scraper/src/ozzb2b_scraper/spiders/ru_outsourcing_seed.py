@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 import structlog
 
 from ozzb2b_scraper.extractors import extract_public_facts
+from ozzb2b_scraper.http import looks_like_challenge
 from ozzb2b_scraper.models import ScrapedProvider
 from ozzb2b_scraper.spiders.base import Spider, SpiderContext
 
@@ -410,6 +411,16 @@ async def _safe_fetch_facts(ctx: SpiderContext, entry: RuSeedEntry):
             "ru_outsourcing_seed.decode.failed",
             source_id=entry.source_id,
             error=str(exc),
+        )
+        return _empty_facts()
+
+    # Anti-bot interstitial pages contain no meaningful facts; drop them instead of
+    # scraping captcha markup into the `description` / `email` fields.
+    if looks_like_challenge(html):
+        log.info(
+            "ru_outsourcing_seed.challenge.skipped",
+            source_id=entry.source_id,
+            website=entry.website,
         )
         return _empty_facts()
 
