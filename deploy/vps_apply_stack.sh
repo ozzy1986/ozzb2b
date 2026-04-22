@@ -39,6 +39,11 @@ NEXT_PUBLIC_OZZB2B_API_URL=https://api.ozzb2b.com
 EOF
 chmod 600 .env.prod
 
+log "sync nginx vhosts"
+install -m 0644 infra/nginx/api.ozzb2b.com.conf /etc/nginx/sites-available/api.ozzb2b.com.conf
+ln -sf /etc/nginx/sites-available/api.ozzb2b.com.conf /etc/nginx/sites-enabled/api.ozzb2b.com.conf
+nginx -t && systemctl reload nginx
+
 log "docker compose up --build"
 docker compose -f compose.prod.yml up -d --build
 

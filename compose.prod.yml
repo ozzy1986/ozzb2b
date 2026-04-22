@@ -88,3 +88,18 @@ services:
       ]
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  chat:
+    image: ozzb2b-chat:local
+    build:
+      context: ./apps/chat
+      dockerfile: Dockerfile
+    container_name: ozzb2b-chat
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      OZZB2B_CHAT_HTTP_ADDR: ":8090"
+    ports:
+      - "127.0.0.1:8090:8090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
