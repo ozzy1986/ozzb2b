@@ -1,10 +1,4 @@
 import { defineConfig } from 'vitest/config';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// `__dirname` isn't defined in ESM; derive it from `import.meta.url`.
-// This works in both CJS (Windows local) and ESM (Linux CI) resolution modes.
-const here = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   esbuild: {
@@ -12,12 +6,16 @@ export default defineConfig({
     jsx: 'automatic',
   },
   resolve: {
-    // Mirrors tsconfig's paths: `@/*` resolves to `./src/*` first (the only
-    // location where this repo keeps reusable code). App routes are tested
-    // through Playwright / integration flows rather than vitest.
-    alias: {
-      '@': path.resolve(here, 'src'),
-    },
+    // Mirrors tsconfig's "paths": `@/*` resolves to `./src/*`. We use
+    // process.cwd() (always the package root when invoked via npm) instead
+    // of __dirname / import.meta.url so the same config works in CJS and
+    // ESM loader modes.
+    alias: [
+      {
+        find: /^@\/(.*)$/,
+        replacement: `${process.cwd().replace(/\\/g, '/')}/src/$1`,
+      },
+    ],
   },
   test: {
     environment: 'jsdom',
@@ -36,9 +34,8 @@ export default defineConfig({
         'app/**/sitemap.ts',
         'app/**/robots.ts',
       ],
-      // Coverage is collected but not gated yet. Raise thresholds as new
-      // component tests are added. Fail-fast floors are enforced for API,
-      // scraper and Go services where coverage is already high.
+      // Thresholds intentionally disabled until we grow RTL coverage.
+      // Coverage is still collected and uploaded as a CI artifact.
       thresholds: {
         lines: 0,
         statements: 0,
