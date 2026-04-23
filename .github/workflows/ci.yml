@@ -65,11 +65,15 @@ jobs:
         # Lock file resolved with --legacy-peer-deps (react 19 RC peers), so
         # use the same flag here; `npm ci` would drop extraneous deps but
         # it refuses the existing lockfile when dependency graphs shift.
+        #
+        # The second install pulls the Linux-specific Rollup native binary
+        # that npm's optional-deps bug sometimes skips. It MUST carry
+        # --legacy-peer-deps as well, otherwise npm re-resolves the whole
+        # tree and fails on react@19.0.0-rc vs @testing-library/react peers.
         run: |
           npm install --legacy-peer-deps --no-audit --no-fund
-          # npm optional deps may be skipped in CI; install rollup native
-          # binary explicitly to avoid flaky startup failures.
-          npm install --no-save @rollup/rollup-linux-x64-gnu
+          npm install --legacy-peer-deps --no-save --no-audit --no-fund \
+            @rollup/rollup-linux-x64-gnu
       - name: Typecheck
         run: npm run typecheck
       - name: Diagnostic
@@ -306,9 +310,13 @@ jobs:
             apps/e2e/package.json
       - name: Install web deps
         working-directory: apps/web
+        # Same peer-resolution dance as the `web` job: the second install
+        # also needs --legacy-peer-deps or npm re-resolves the graph and
+        # fails on react@19.0.0-rc peers.
         run: |
           npm install --legacy-peer-deps --no-audit --no-fund
-          npm install --no-save @rollup/rollup-linux-x64-gnu
+          npm install --legacy-peer-deps --no-save --no-audit --no-fund \
+            @rollup/rollup-linux-x64-gnu
       - name: Build web
         working-directory: apps/web
         env:
