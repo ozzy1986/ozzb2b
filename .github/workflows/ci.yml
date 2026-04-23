@@ -433,12 +433,13 @@ jobs:
           pip install pip-audit bandit
       - name: pip-audit api dependencies
         working-directory: apps/api
-        # `ozzb2b-api` itself is an editable local package with no PyPI entry,
-        # which pip-audit treats as an error. --skip-editable tells pip-audit
-        # to only check versioned PyPI deps, which is exactly what we want.
+        # `ozzb2b-api` is an editable local package with no PyPI entry. With
+        # `--strict` pip-audit turns every skipped distribution into an
+        # error, so we drop strict mode (the exit code still reflects real
+        # vulnerabilities) and ask pip-audit to skip editable installs.
         run: |
           pip install -e "."
-          pip-audit --strict --skip-editable
+          pip-audit --skip-editable
       - name: bandit (api)
         working-directory: apps/api
         run: bandit -q -r src -x src/ozzb2b_api/grpc_gen
