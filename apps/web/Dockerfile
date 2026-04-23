@@ -1,8 +1,13 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
+# React 19 RC + @testing-library/react 16 require --legacy-peer-deps.
 RUN --mount=type=cache,target=/root/.npm \
-    if [ -f package-lock.json ]; then npm ci; else npm install; fi
+    if [ -f package-lock.json ]; then \
+        npm ci --legacy-peer-deps --no-audit --no-fund; \
+    else \
+        npm install --legacy-peer-deps --no-audit --no-fund; \
+    fi
 
 FROM node:22-alpine AS builder
 WORKDIR /app
