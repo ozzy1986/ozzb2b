@@ -75,9 +75,6 @@ jobs:
       - name: Test (lib)
         run: npm run test:lib
       - name: Test (components)
-        # RTL component tests require jsdom + React 19 RC; kept as a
-        # continue-on-error step while we iterate on the CI environment.
-        continue-on-error: true
         run: npm run test
       - name: Coverage (informational)
         continue-on-error: true
