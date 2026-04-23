@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:lib": "vitest run src/lib",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
