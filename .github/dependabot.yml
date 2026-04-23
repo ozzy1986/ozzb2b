@@ -1,0 +1,95 @@
+version: 2
+# Keep every ecosystem we ship on a weekly security/minor bump cadence so the
+# gitleaks/govulncheck/cargo-audit/pip-audit gates don't have to hand-apply
+# CVE patches. Open PRs get the regular CI matrix, so anything broken is
+# caught before merge.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      python-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /apps/scraper
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      python-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      node-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/e2e
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: gomod
+    directory: /apps/chat
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: gomod
+    directory: /apps/events
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: cargo
+    directory: /apps/matcher
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: docker
+    directory: /apps/api
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /apps/chat
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /apps/events
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /apps/matcher
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /apps/scraper
+    schedule:
+      interval: weekly

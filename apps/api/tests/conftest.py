@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -10,10 +12,12 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from ozzb2b_api.app import create_app
 from ozzb2b_api.config import Settings
@@ -32,12 +36,19 @@ PORTABLE_TABLES = (
 
 
 @pytest.fixture()
-def settings() -> Settings:
-    """Minimal, hermetic test settings (no external deps required)."""
+def settings(tmp_path: Path) -> Settings:
+    """Minimal, hermetic test settings (no external deps required).
+
+    We back SQLite with a tmp-file so that every Session opened from the
+    same engine sees the same database — a shared ``:memory:`` DB would
+    otherwise need StaticPool + thread-pinning, which breaks when the
+    FastAPI TestClient spawns its own event loop in a worker thread.
+    """
+    db_path = tmp_path / "ozzb2b-test.db"
     return Settings(
         env="test",
         log_level="WARNING",
-        database_url="sqlite+aiosqlite:///:memory:",
+        database_url=f"sqlite+aiosqlite:///{db_path.as_posix()}",
         redis_url="redis://127.0.0.1:6399/15",
         meilisearch_url="http://127.0.0.1:7799",
         rate_limit_enabled=False,
@@ -54,20 +65,41 @@ def _create_portable_tables(sync_conn: Any) -> None:
 
 
 @pytest.fixture()
-def client(settings: Settings) -> Iterator[TestClient]:
-    """TestClient with an isolated in-memory SQLite DB wired as get_db()."""
-    engine = create_async_engine(settings.database_url, future=True)
-    sessionmaker: Any = async_sessionmaker(
-        engine, expire_on_commit=False, class_=AsyncSession
-    )
+def test_engine(settings: Settings) -> Iterator[AsyncEngine]:
+    """A pre-populated SQLite engine shared with ``client``.
 
-    import asyncio
+    Exposing the engine explicitly lets tests insert fixture rows (users,
+    providers, etc.) without going through FastAPI, while still sharing
+    state with whatever the route-handlers read from ``get_db``.
+    """
+    # NullPool: every new session opens its own aiosqlite connection and
+    # closes it on release, so connections never cross the event-loop
+    # boundary between the main thread and the TestClient worker loop.
+    engine = create_async_engine(
+        settings.database_url, future=True, poolclass=NullPool
+    )
 
     async def _prepare() -> None:
         async with engine.begin() as conn:
             await conn.run_sync(_create_portable_tables)
 
-    asyncio.get_event_loop().run_until_complete(_prepare())
+    asyncio.run(_prepare())
+    try:
+        yield engine
+    finally:
+
+        async def _dispose() -> None:
+            await engine.dispose()
+
+        asyncio.run(_dispose())
+
+
+@pytest.fixture()
+def client(settings: Settings, test_engine: AsyncEngine) -> Iterator[TestClient]:
+    """TestClient wired to the shared in-memory SQLite engine."""
+    sessionmaker: Any = async_sessionmaker(
+        test_engine, expire_on_commit=False, class_=AsyncSession
+    )
 
     async def override_db() -> AsyncIterator[AsyncSession]:
         async with sessionmaker() as session:
@@ -83,16 +115,13 @@ def client(settings: Settings) -> Iterator[TestClient]:
     with TestClient(app) as c:
         yield c
 
-    async def _dispose() -> None:
-        await engine.dispose()
-
-    asyncio.get_event_loop().run_until_complete(_dispose())
-
 
 @pytest_asyncio.fixture()
 async def db_session(settings: Settings) -> AsyncIterator[AsyncSession]:
     """Standalone session for service-layer tests (no FastAPI wiring)."""
-    engine = create_async_engine(settings.database_url, future=True)
+    engine = create_async_engine(
+        settings.database_url, future=True, poolclass=NullPool
+    )
     async with engine.begin() as conn:
         await conn.run_sync(_create_portable_tables)
     sessionmaker: Any = async_sessionmaker(
