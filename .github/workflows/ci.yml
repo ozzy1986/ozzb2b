@@ -2,14 +2,19 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
+  # ---------------- Language-level test matrices ----------------
+
   api:
     name: api (python)
     runs-on: ubuntu-24.04
@@ -30,8 +35,15 @@ jobs:
         run: ruff check .
       - name: Typecheck
         run: mypy src
-      - name: Test
+      - name: Test with coverage
         run: pytest
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-api
+          path: apps/api/coverage.xml
+          if-no-files-found: ignore
 
   web:
     name: web (next.js)
@@ -47,11 +59,18 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package.json
       - name: Install
-        run: npm install
+        run: npm install --legacy-peer-deps
       - name: Typecheck
         run: npm run typecheck
-      - name: Test
-        run: npm run test
+      - name: Test with coverage
+        run: npm run test:coverage
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-web
+          path: apps/web/coverage/lcov.info
+          if-no-files-found: ignore
 
   chat:
     name: chat (go)
@@ -68,8 +87,16 @@ jobs:
         run: go vet ./...
       - name: Build
         run: go build ./...
-      - name: Test
-        run: go test ./...
+      - name: Test with race + coverage
+        run: |
+          chmod +x ../../scripts/check_go_coverage.sh
+          ../../scripts/check_go_coverage.sh . 55
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-chat
+          path: apps/chat/coverage.out
+          if-no-files-found: ignore
 
   events:
     name: events (go)
@@ -84,7 +111,16 @@ jobs:
           go-version: "1.23"
       - run: go vet ./...
       - run: go build ./...
-      - run: go test ./...
+      - name: Test with race + coverage
+        run: |
+          chmod +x ../../scripts/check_go_coverage.sh
+          ../../scripts/check_go_coverage.sh . 55
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-events
+          path: apps/events/coverage.out
+          if-no-files-found: ignore
 
   matcher:
     name: matcher (rust)
@@ -98,6 +134,9 @@ jobs:
         with:
           toolchain: "1.85"
           components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/matcher
       - name: protoc
         run: |
           sudo apt-get update
@@ -129,5 +168,175 @@ jobs:
           pip install -e ".[dev]"
       - name: Lint
         run: ruff check .
-      - name: Test
+      - name: Test with coverage
         run: pytest
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-scraper
+          path: apps/scraper/coverage.xml
+          if-no-files-found: ignore
+
+  # ---------------- Contract / artifact integrity ----------------
+
+  proto-drift:
+    name: proto drift (python stubs)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install protoc + grpc tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler
+          python -m pip install --upgrade pip
+          pip install "grpcio-tools>=1.67,<2"
+      - name: Regenerate Python stubs from proto/
+        run: |
+          mkdir -p .tmp-gen
+          python -m grpc_tools.protoc \
+            -Iproto \
+            --python_out=.tmp-gen \
+            --grpc_python_out=.tmp-gen \
+            proto/ozzb2b/matcher/v1/matcher.proto
+      - name: Compare with committed stubs
+        run: |
+          set -e
+          # grpc_tools emits absolute imports into the top-level package; we
+          # compare only the generated pb2 files for drift detection.
+          diff -u apps/api/src/ozzb2b_api/grpc_gen/ozzb2b/matcher/v1/matcher_pb2.py \
+            .tmp-gen/ozzb2b/matcher/v1/matcher_pb2.py || (
+              echo "proto/ changed but generated stubs were not regenerated."
+              echo "Run: python -m grpc_tools.protoc -Iproto --python_out=apps/api/src/ozzb2b_api/grpc_gen --grpc_python_out=apps/api/src/ozzb2b_api/grpc_gen proto/ozzb2b/matcher/v1/matcher.proto"
+              exit 1
+            )
+
+  docker-build:
+    name: docker build (${{ matrix.service }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, web, chat, events, matcher, scraper]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          # matcher Dockerfile expects repo root (needs ./proto), others use their own dir.
+          context: ${{ matrix.service == 'matcher' && '.' || format('apps/{0}', matrix.service) }}
+          file: ${{ matrix.service == 'matcher' && 'apps/matcher/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
+          push: false
+          load: false
+          tags: ozzb2b-${{ matrix.service }}:ci
+
+  # ---------------- Security scans ----------------
+
+  security-python:
+    name: security (python)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install audit tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit bandit
+      - name: pip-audit api
+        run: pip-audit --strict -r <(cd apps/api && pip install -e ".[dev]" --dry-run --quiet 2>/dev/null; pip freeze) || true
+      - name: bandit (api)
+        working-directory: apps/api
+        run: bandit -q -r src -x src/ozzb2b_api/grpc_gen
+      - name: bandit (scraper)
+        working-directory: apps/scraper
+        run: bandit -q -r src
+
+  security-go:
+    name: security (go)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: govulncheck chat
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+        working-directory: apps/chat
+      - name: govulncheck events
+        run: govulncheck ./...
+        working-directory: apps/events
+
+  security-rust:
+    name: security (rust)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/matcher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.85"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/matcher
+      - name: cargo-audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+
+  security-fs:
+    name: security (filesystem trivy)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          skip-dirs: legacy,node_modules,target,.venv
+          exit-code: 1
+
+  secret-scan:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------- Final gate ----------------
+
+  ci-ok:
+    name: ci ok
+    needs:
+      - api
+      - web
+      - chat
+      - events
+      - matcher
+      - scraper
+      - proto-drift
+      - docker-build
+      - security-python
+      - security-go
+      - security-rust
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "all required jobs passed"

@@ -34,6 +34,8 @@ venv/
 .coverage
 .coverage.*
 htmlcov/
+coverage.xml
+coverage.lcov
 dist/
 build/
 
@@ -45,12 +47,17 @@ out/
 .pnp.*
 .yarn/
 .pnpm-store/
+# vitest v8 coverage output
+apps/web/coverage/
 
 # ---- Go ----
 /apps/chat/bin/
 /apps/events/bin/
 *.test
-*.out
+# `*.out` would match Go test coverage. We only want to ignore Go binary .out,
+# not repo-relative coverage files like scripts may produce intentionally.
+apps/chat/coverage.out
+apps/events/coverage.out
 
 # ---- Rust ----
 /apps/matcher/target/

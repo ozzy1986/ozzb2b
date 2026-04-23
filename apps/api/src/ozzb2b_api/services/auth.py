@@ -128,6 +128,16 @@ async def _lookup_active_refresh(session: AsyncSession, token_hash: str) -> Refr
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Coerce a possibly naive datetime to UTC-aware.
+
+    Postgres `timestamptz` always returns aware values; some drivers and
+    SQLite can yield naive datetimes. Treating naive timestamps as UTC
+    matches how the service writes them via `datetime.now(tz=UTC)`.
+    """
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
 async def rotate_refresh(
     session: AsyncSession,
     *,
@@ -161,7 +171,7 @@ async def rotate_refresh(
             .values(revoked_at=datetime.now(tz=UTC))
         )
         raise InvalidRefreshTokenError("refresh token already used")
-    if existing.expires_at <= datetime.now(tz=UTC):
+    if _as_utc(existing.expires_at) <= datetime.now(tz=UTC):
         raise InvalidRefreshTokenError("refresh token expired")
 
     user = (

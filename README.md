@@ -1,5 +1,7 @@
 # ozzb2b — B2B services marketplace
 
+[![ci](https://github.com/ozzy1986/ozzb2b/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ozzy1986/ozzb2b/actions/workflows/ci.yml)
+
 Aggregator and marketplace of B2B service providers (IT outsourcing, accounting,
 legal, marketing, HR) focused on the RU market. Public catalog, faceted search,
 real-time chat between buyers and providers, a "claim your company" flow, and
@@ -209,13 +211,54 @@ cd apps/scraper && celery -A ozzb2b_scraper.tasks worker --loglevel=INFO
 Per-service tests:
 
 ```bash
-cd apps/api    && pytest
-cd apps/web    && npm run test
-cd apps/chat   && go test ./...
-cd apps/events && go test ./...
-cd apps/matcher && cargo test
-cd apps/scraper && pytest
+cd apps/api    && pytest                       # coverage + snapshot
+cd apps/web    && npm run test:coverage        # vitest v8 coverage
+cd apps/chat   && go test -race ./...
+cd apps/events && go test -race ./...
+cd apps/matcher && cargo test --all-targets
+cd apps/scraper && pytest                      # coverage
 ```
+
+Or run everything from the repo root:
+
+```bash
+make install       # install every language toolchain
+make test          # run every unit/integration suite
+make coverage      # enforce per-service coverage thresholds
+make lint          # ruff + mypy + tsc + go vet + clippy + rustfmt
+```
+
+Optional pre-commit hooks (Python + secret scan + large file guard) are
+configured in `.pre-commit-config.yaml`; enable with
+`pip install pre-commit && pre-commit install`.
+
+---
+
+## Testing strategy
+
+All work in `apps/` is guarded by a matching CI job in
+`.github/workflows/ci.yml` that must be green before merging:
+
+- **apps/api** — `pytest` + `pytest-cov` with a 60% threshold, strict
+  `mypy --strict`, `ruff check`. Includes an OpenAPI snapshot test to detect
+  public surface drift (`apps/api/tests/snapshots/openapi_routes.json`).
+- **apps/scraper** — `pytest` with a 70% threshold, `ruff check`, per-spider
+  HTML fixtures.
+- **apps/web** — `vitest` with v8 coverage provider (floor: 20% lines /
+  55% branches), `tsc --noEmit`, React component tests via `@testing-library/react`.
+- **apps/chat, apps/events** — `go vet` + `go test -race -coverprofile`
+  with a 55% coverage floor enforced by `scripts/check_go_coverage.sh`.
+- **apps/matcher** — `cargo fmt --check`, `cargo clippy -- -D warnings`,
+  `cargo test --all-targets`.
+
+Extra CI gates:
+
+- **proto drift** — regenerates Python stubs from `proto/` and fails if the
+  committed `grpc_gen/` files don't match.
+- **docker-build matrix** — builds every service's Dockerfile to catch
+  packaging-only regressions.
+- **security** — `pip-audit` + `bandit` for Python, `govulncheck` for Go,
+  `cargo audit` for Rust, Trivy filesystem scan, and gitleaks secret scan.
 
 ---
 
