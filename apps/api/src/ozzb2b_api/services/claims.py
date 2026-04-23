@@ -39,7 +39,7 @@ log = structlog.get_logger("ozzb2b_api.services.claims")
 
 
 META_TAG_NAME = "ozzb2b-verify"
-TOKEN_PREFIX = "ozzb2b-"
+TOKEN_PREFIX = "ozzb2b-"  # nosec B105 - public verification-token prefix, not secret
 TOKEN_RANDOM_BYTES = 16  # 32 hex chars
 _MAX_HOMEPAGE_BYTES = 512 * 1024  # 512 KB is more than enough for a <head>
 
