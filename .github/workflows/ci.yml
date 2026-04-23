@@ -423,14 +423,42 @@ jobs:
         run: docker compose --env-file .env.prod -f compose.prod.yml config -q
       - name: Lint nginx vhosts with nginx -t
         run: |
-          # Run a throwaway nginx container; each vhost is validated against the
-          # default nginx config skeleton so typos / missing directives fail
-          # fast here instead of during a live reload on the VPS.
+          # Run a throwaway nginx container per vhost. On the VPS, certbot
+          # writes the Let's Encrypt bits into /etc/letsencrypt/*; we can't
+          # ship those into CI, so we generate a self-signed throwaway cert
+          # plus stubs for the certbot-managed include files. This keeps the
+          # linter focused on SYNTAX drift, which is the only thing a CI gate
+          # can meaningfully catch before a live deploy.
           set -e
+          mkdir -p .tmp-nginx/letsencrypt/live/ozzb2b.com
+          mkdir -p .tmp-nginx/letsencrypt/live/api.ozzb2b.com
+          mkdir -p .tmp-nginx/letsencrypt/live/grafana.ozzb2b.com
+          mkdir -p .tmp-nginx/snippets
+          openssl req -x509 -nodes -newkey rsa:2048 \
+            -keyout .tmp-nginx/letsencrypt/live/ozzb2b.com/privkey.pem \
+            -out    .tmp-nginx/letsencrypt/live/ozzb2b.com/fullchain.pem \
+            -days 1 -subj "/CN=ci-stub"
+          for host in api.ozzb2b.com grafana.ozzb2b.com; do
+            cp .tmp-nginx/letsencrypt/live/ozzb2b.com/privkey.pem \
+               .tmp-nginx/letsencrypt/live/$host/privkey.pem
+            cp .tmp-nginx/letsencrypt/live/ozzb2b.com/fullchain.pem \
+               .tmp-nginx/letsencrypt/live/$host/fullchain.pem
+          done
+          # Empty stubs for certbot-managed includes referenced by the vhosts.
+          : > .tmp-nginx/letsencrypt/options-ssl-nginx.conf
+          openssl dhparam -out .tmp-nginx/letsencrypt/ssl-dhparams.pem 1024 2>/dev/null
+          # Minimal snippet used by ozzb2b.com + grafana vhosts.
+          cat > .tmp-nginx/snippets/ssl-modern.conf <<'SNIP'
+          ssl_protocols TLSv1.2 TLSv1.3;
+          ssl_prefer_server_ciphers on;
+          SNIP
+
           for f in infra/nginx/*.conf; do
             echo "--- $f"
             docker run --rm \
               -v "$PWD/$f:/etc/nginx/conf.d/vhost.conf:ro" \
+              -v "$PWD/.tmp-nginx/letsencrypt:/etc/letsencrypt:ro" \
+              -v "$PWD/.tmp-nginx/snippets:/etc/nginx/snippets:ro" \
               nginx:1.27-alpine nginx -t
           done
 
