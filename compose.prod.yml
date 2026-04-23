@@ -225,9 +225,10 @@ services:
     mem_reservation: 32m
 
   # Per-container CPU/RAM/disk/network + Docker stats.
-  # Pinned to v0.47.2: newer 0.49.x versions have a known bug with Docker's
-  # overlay2 storage driver where they look for layer metadata under the
-  # wrong path and end up publishing only the root cgroup series.
+  # Pinned to v0.47.2: newer 0.49.x silently stops emitting per-container
+  # series on hosts using Docker's overlay2 storage driver.
+  # We also drop --docker_only so cAdvisor falls back to raw cgroup scanning
+  # when its Docker-API discovery path errors out (known issue with overlay2).
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
     container_name: ozzb2b-cadvisor
@@ -235,7 +236,6 @@ services:
     privileged: true
     command:
       - --housekeeping_interval=30s
-      - --docker_only=true
       - --store_container_labels=false
       - --whitelisted_container_labels=com.docker.compose.service,com.docker.compose.project
     ports:
