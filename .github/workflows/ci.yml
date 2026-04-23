@@ -434,12 +434,11 @@ jobs:
       - name: pip-audit api dependencies
         working-directory: apps/api
         # `ozzb2b-api` itself is an editable local package with no PyPI entry,
-        # which pip-audit --strict treats as an error. Filter our own package
-        # out of the frozen requirements before auditing.
+        # which pip-audit treats as an error. --skip-editable tells pip-audit
+        # to only check versioned PyPI deps, which is exactly what we want.
         run: |
           pip install -e "."
-          pip freeze | grep -v '^ozzb2b-api' > /tmp/api-requirements.txt
-          pip-audit --strict -r /tmp/api-requirements.txt
+          pip-audit --strict --skip-editable
       - name: bandit (api)
         working-directory: apps/api
         run: bandit -q -r src -x src/ozzb2b_api/grpc_gen
