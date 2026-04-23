@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import {
-  ApiError,
   initiateClaim,
   verifyClaim,
   type ClaimInitiateResponse,
   type ClaimPublic,
 } from '@/lib/api';
+import { humanizeError, isApiErrorStatus } from '@/lib/errors';
+import { ErrorAlert } from './ErrorAlert';
 
 type Props = {
   providerSlug: string;
@@ -35,11 +36,11 @@ export function ClaimFlow({ providerSlug, providerDisplayName, providerWebsite }
       setInitiation(data);
       setStep('instructions');
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (isApiErrorStatus(err, 401)) {
         router.push(`/login?next=${encodeURIComponent(`/providers/${providerSlug}/claim`)}`);
         return;
       }
-      setError(err instanceof ApiError ? err.detail : 'Не удалось начать подтверждение.');
+      setError(humanizeError(err, 'claim-init'));
     } finally {
       setPending(false);
     }
@@ -53,11 +54,7 @@ export function ClaimFlow({ providerSlug, providerDisplayName, providerWebsite }
       setClaim(data);
       setStep('verified');
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.detail
-          : 'Не удалось проверить meta-тег. Проверьте, что он опубликован на главной странице.',
-      );
+      setError(humanizeError(err, 'claim-verify'));
     } finally {
       setPending(false);
     }
@@ -94,7 +91,11 @@ export function ClaimFlow({ providerSlug, providerDisplayName, providerWebsite }
         <button type="button" className="contact-cta" onClick={onStart} disabled={pending}>
           {pending ? 'Готовим инструкцию...' : 'Начать подтверждение'}
         </button>
-        {error ? <div className="auth-error" style={{ marginTop: 12 }}>{error}</div> : null}
+        <ErrorAlert
+          message={error}
+          style={{ marginTop: 12 }}
+          onRetry={!pending ? onStart : undefined}
+        />
       </div>
     );
   }
@@ -137,7 +138,11 @@ export function ClaimFlow({ providerSlug, providerDisplayName, providerWebsite }
             Назад
           </button>
         </div>
-        {error ? <div className="auth-error" style={{ marginTop: 12 }}>{error}</div> : null}
+        <ErrorAlert
+          message={error}
+          style={{ marginTop: 12 }}
+          onRetry={!pending ? onVerify : undefined}
+        />
       </div>
     );
   }

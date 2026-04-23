@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import {
-  ApiError,
   updateOwnedProvider,
   type ProviderUpdate,
 } from '@/lib/api';
+import { humanizeError } from '@/lib/errors';
 import type { ProviderDetail } from '@/lib/types';
+import { ErrorAlert } from './ErrorAlert';
 
 type Props = {
   initial: ProviderDetail;
@@ -37,11 +38,7 @@ export function OwnedProviderEditor({ initial }: Props) {
       await updateOwnedProvider(initial.slug, form);
       setSaved(new Date());
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.detail
-          : 'Не удалось сохранить. Попробуйте ещё раз.',
-      );
+      setError(humanizeError(err, 'provider-update'));
     } finally {
       setPending(false);
     }
@@ -116,7 +113,7 @@ export function OwnedProviderEditor({ initial }: Props) {
           </span>
         ) : null}
       </div>
-      {error ? <div className="auth-error">{error}</div> : null}
+      <ErrorAlert message={error} />
     </form>
   );
 }

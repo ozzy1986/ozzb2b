@@ -4,15 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ApiError,
   getConversation,
   listMessages,
   sendMessage,
 } from '@/lib/api';
+import { humanizeError, isApiErrorStatus } from '@/lib/errors';
 import type { ChatMessage, Conversation } from '@/lib/types';
 import { ChatInbox } from './ChatInbox';
 import { useChatSocket } from './useChatSocket';
 import { useCurrentUser } from '../useCurrentUser';
+import { ErrorAlert } from '../ErrorAlert';
 
 type Props = {
   conversationId: string;
@@ -64,17 +65,17 @@ export function ChatPageClient({ conversationId }: Props) {
         setMessages({ status: 'ready', items: msgs.items });
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiError && err.status === 401) {
+        if (isApiErrorStatus(err, 401)) {
           router.push(`/login?next=/chat/${conversationId}`);
           return;
         }
-        if (err instanceof ApiError && err.status === 403) {
+        if (isApiErrorStatus(err, 403)) {
           router.push('/chat');
           return;
         }
         setMessages({
           status: 'error',
-          message: err instanceof Error ? err.message : 'Не удалось загрузить беседу.',
+          message: humanizeError(err, 'chat-load'),
         });
       }
     })();
@@ -113,9 +114,7 @@ export function ChatPageClient({ conversationId }: Props) {
         });
         setDraft('');
       } catch (err) {
-        setSendError(
-          err instanceof ApiError ? err.detail : 'Не удалось отправить. Попробуйте ещё раз.',
-        );
+        setSendError(humanizeError(err, 'chat-send'));
       } finally {
         setSending(false);
       }
@@ -160,7 +159,10 @@ export function ChatPageClient({ conversationId }: Props) {
           {messages.status === 'loading' ? (
             <div className="auth-hint">Загружаем сообщения...</div>
           ) : messages.status === 'error' ? (
-            <div className="auth-error">{messages.message}</div>
+            <ErrorAlert
+              message={messages.message}
+              onRetry={() => router.refresh()}
+            />
           ) : messages.items.length === 0 ? (
             <div className="auth-hint">
               Пока нет сообщений. Напишите первым — это безопасно и бесплатно.
@@ -198,7 +200,8 @@ export function ChatPageClient({ conversationId }: Props) {
             {sending ? 'Отправка...' : 'Отправить'}
           </button>
         </form>
-        {sendError ? <div className="auth-error" style={{ padding: 8 }}>{sendError}</div> : null}
+        <ErrorAlert message={sendError} style={{ margin: 8 }} />
+
       </section>
     </div>
   );

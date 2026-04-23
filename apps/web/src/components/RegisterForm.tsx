@@ -3,25 +3,9 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { ApiError, register } from '@/lib/api';
-
-function toErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.status === 409) return 'Пользователь с таким email уже существует.';
-    if (err.status === 422) {
-      const detail = err.detail.toLowerCase();
-      if (detail.includes('password')) {
-        return 'Пароль должен быть не короче 10 символов.';
-      }
-      if (detail.includes('email')) {
-        return 'Проверьте корректность email.';
-      }
-      return `Проверьте корректность данных: ${err.detail}`;
-    }
-    return err.detail || 'Не удалось создать аккаунт.';
-  }
-  return 'Сеть недоступна. Попробуйте ещё раз.';
-}
+import { register } from '@/lib/api';
+import { humanizeError } from '@/lib/errors';
+import { ErrorAlert } from './ErrorAlert';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -46,7 +30,7 @@ export function RegisterForm() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      setError(toErrorMessage(err));
+      setError(humanizeError(err, 'auth-register'));
     } finally {
       setPending(false);
     }
@@ -89,7 +73,7 @@ export function RegisterForm() {
         />
       </label>
       <div className="auth-hint">Минимальная длина пароля: 10 символов.</div>
-      {error ? <div className="auth-error">{error}</div> : null}
+      <ErrorAlert message={error} />
       <button type="submit" disabled={pending}>
         {pending ? 'Создаём...' : 'Зарегистрироваться'}
       </button>

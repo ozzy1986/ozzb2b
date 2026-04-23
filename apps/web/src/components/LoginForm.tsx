@@ -3,15 +3,9 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { ApiError, login } from '@/lib/api';
-
-function toErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.status === 401) return 'Неверный email или пароль.';
-    return err.detail || 'Не удалось войти.';
-  }
-  return 'Сеть недоступна. Попробуйте ещё раз.';
-}
+import { login } from '@/lib/api';
+import { humanizeError } from '@/lib/errors';
+import { ErrorAlert } from './ErrorAlert';
 
 export function LoginForm() {
   const router = useRouter();
@@ -31,7 +25,7 @@ export function LoginForm() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      setError(toErrorMessage(err));
+      setError(humanizeError(err, 'auth-login'));
     } finally {
       setPending(false);
     }
@@ -63,7 +57,7 @@ export function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
-      {error ? <div className="auth-error">{error}</div> : null}
+      <ErrorAlert message={error} />
       <button type="submit" disabled={pending}>
         {pending ? 'Входим...' : 'Войти'}
       </button>

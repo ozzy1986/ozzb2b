@@ -2,7 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
-import { ApiError, startConversation } from '@/lib/api';
+import { startConversation } from '@/lib/api';
+import { humanizeError, isApiErrorStatus } from '@/lib/errors';
+import { ErrorAlert } from './ErrorAlert';
 
 type Props = {
   providerSlug: string;
@@ -20,13 +22,11 @@ export function ContactProviderButton({ providerSlug }: Props) {
       const conv = await startConversation(providerSlug);
       router.push(`/chat/${conv.id}`);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (isApiErrorStatus(err, 401)) {
         router.push(`/login?next=${encodeURIComponent(`/providers/${providerSlug}`)}`);
         return;
       }
-      setError(
-        err instanceof ApiError ? err.detail : 'Не удалось открыть чат. Попробуйте ещё раз.',
-      );
+      setError(humanizeError(err, 'chat-open'));
     } finally {
       setPending(false);
     }
@@ -37,7 +37,7 @@ export function ContactProviderButton({ providerSlug }: Props) {
       <button type="button" className="contact-cta" onClick={onClick} disabled={pending}>
         {pending ? 'Открываем чат...' : 'Связаться'}
       </button>
-      {error ? <div className="auth-error">{error}</div> : null}
+      <ErrorAlert message={error} onRetry={!pending ? onClick : undefined} />
     </div>
   );
 }

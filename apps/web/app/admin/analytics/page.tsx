@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  ApiError,
   getAnalyticsSummary,
   getMe,
   getTopProviders,
   getTopSearches,
 } from '@/lib/api';
+import { humanizeError } from '@/lib/errors';
 import type { AnalyticsSummary, TopProviders, TopQueries } from '@/lib/types';
 import { authHeaders } from '@/lib/server-fetch';
 
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 
 type AdminSearchParams = { days?: string };
 
-type FetchError = { kind: 'error'; message: string; status: number };
+type FetchError = { kind: 'error'; message: string };
 type FetchOk<T> = { kind: 'ok'; value: T };
 type FetchResult<T> = FetchOk<T> | FetchError;
 
@@ -36,10 +36,7 @@ async function guard<T>(p: Promise<T>): Promise<FetchResult<T>> {
   try {
     return { kind: 'ok', value: await p };
   } catch (err) {
-    if (err instanceof ApiError) {
-      return { kind: 'error', message: err.detail || 'ошибка API', status: err.status };
-    }
-    return { kind: 'error', message: 'Сеть недоступна', status: 0 };
+    return { kind: 'error', message: humanizeError(err, 'admin-fetch') };
   }
 }
 
@@ -103,7 +100,7 @@ export default async function AdminAnalyticsPage({
       <section>
         <h2>Сводка по типам событий</h2>
         {summary.kind === 'error' ? (
-          <div className="empty">Не удалось получить сводку: {summary.message}</div>
+          <div className="empty">{summary.message}</div>
         ) : summary.value.items.length === 0 ? (
           <div className="empty">Нет событий за выбранный период.</div>
         ) : (
@@ -130,7 +127,7 @@ export default async function AdminAnalyticsPage({
         <section>
           <h2>Популярные запросы</h2>
           {searches.kind === 'error' ? (
-            <div className="empty">Не удалось получить топ запросов: {searches.message}</div>
+            <div className="empty">{searches.message}</div>
           ) : searches.value.items.length === 0 ? (
             <div className="empty">Поиск ещё никто не использовал за период.</div>
           ) : (
@@ -148,9 +145,7 @@ export default async function AdminAnalyticsPage({
         <section>
           <h2>Самые просматриваемые компании</h2>
           {providers.kind === 'error' ? (
-            <div className="empty">
-              Не удалось получить топ компаний: {providers.message}
-            </div>
+            <div className="empty">{providers.message}</div>
           ) : providers.value.items.length === 0 ? (
             <div className="empty">Компании ещё никто не открывал за период.</div>
           ) : (

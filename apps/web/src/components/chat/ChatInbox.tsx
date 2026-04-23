@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ApiError, listConversations } from '@/lib/api';
+import { listConversations } from '@/lib/api';
+import { humanizeError, isApiErrorStatus } from '@/lib/errors';
 import type { Conversation } from '@/lib/types';
+import { ErrorAlert } from '../ErrorAlert';
 
 type Props = {
   activeConversationId: string | null;
@@ -48,13 +50,13 @@ export function ChatInbox({ activeConversationId, compact }: Props) {
         }
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiError && err.status === 401) {
+        if (isApiErrorStatus(err, 401)) {
           router.push('/login?next=/chat');
           return;
         }
         setState({
           status: 'error',
-          message: err instanceof Error ? err.message : 'Не удалось загрузить беседы.',
+          message: humanizeError(err, 'chat-load'),
         });
       }
     })();
@@ -67,7 +69,12 @@ export function ChatInbox({ activeConversationId, compact }: Props) {
     return <div className="chat-inbox"><h2>Беседы</h2><span className="auth-hint">Загружаем...</span></div>;
   }
   if (state.status === 'error') {
-    return <div className="chat-inbox"><h2>Беседы</h2><span className="auth-error">{state.message}</span></div>;
+    return (
+      <div className="chat-inbox">
+        <h2>Беседы</h2>
+        <ErrorAlert message={state.message} />
+      </div>
+    );
   }
   if (state.status === 'empty') {
     return (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { issueWsToken } from '@/lib/api';
+import { humanizeError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 
 type State =
@@ -70,7 +71,7 @@ export function useChatSocket({ conversationId, onMessage }: Options): State {
         if (cancelled) return;
         setState({
           status: 'error',
-          message: err instanceof Error ? err.message : 'Не удалось открыть чат.',
+          message: humanizeError(err, 'chat-open'),
         });
       }
     }
