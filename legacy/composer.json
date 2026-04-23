@@ -1,6 +1,0 @@
-{
-    "require": {
-        "telegram-bot/api": "^2.3",
-        "athlon1600/youtube-downloader": "^2.0"
-    }
-}
