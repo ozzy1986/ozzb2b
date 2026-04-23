@@ -36,7 +36,10 @@ for metric in node_cpu_seconds_total node_memory_MemAvailable_bytes node_filesys
 done
 
 log "4) Container metrics present"
-c=$(curl -sSf --data-urlencode 'query=count(container_memory_working_set_bytes{name!=""})' "${PROM_URL}/api/v1/query" \
+# Accept any per-container series (id!=\"/\") so the check works regardless of
+# whether cAdvisor labels every container with `name=`.
+c=$(curl -sSG "${PROM_URL}/api/v1/query" \
+    --data-urlencode 'query=count(container_memory_working_set_bytes{id!="/"})' \
     | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)')
 [ "${c:-0}" != "0" ] || { echo "FAIL: no container memory samples"; exit 1; }
 echo "  OK: container_memory_working_set_bytes series=${c}"
