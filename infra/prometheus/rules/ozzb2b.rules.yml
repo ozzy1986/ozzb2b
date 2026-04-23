@@ -1,0 +1,140 @@
+# Prometheus alerting rules for the ozzb2b stack.
+#
+# Style:
+# - Every alert has a severity label so Alertmanager can route notifications.
+# - Every alert has a short, human-friendly summary/description so the
+#   Telegram notification is useful on its own (no need to log into Grafana
+#   to understand what's wrong).
+# - Thresholds are deliberately conservative for a single 4-GB VPS.
+
+groups:
+  - name: ozzb2b-availability
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} scrape target is down"
+          description: "Prometheus hasn't been able to scrape {{ $labels.job }} ({{ $labels.instance }}) for 2 minutes."
+
+      - alert: PrometheusSelfUnhealthy
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus itself appears down"
+          description: "Prometheus has failed its self scrape — metrics collection may be stalled."
+
+  - name: ozzb2b-http
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          sum(rate(ozzb2b_api_http_requests_total{status=~"5.."}[5m]))
+            /
+          clamp_min(sum(rate(ozzb2b_api_http_requests_total[5m])), 1)
+            > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 5xx rate above 5% (5m)"
+          description: "More than 5% of API responses are 5xx over the last 5 minutes."
+
+      - alert: APILatencyP95High
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(ozzb2b_api_http_request_duration_seconds_bucket[5m]))
+          ) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency > 1.5s (10m)"
+          description: "p95 latency of API HTTP responses has exceeded 1.5 seconds for 10 minutes."
+
+  - name: ozzb2b-auth-abuse
+    rules:
+      - alert: AuthRateLimitSpike
+        expr: sum(increase(ozzb2b_auth_rate_limit_blocked_total[5m])) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Auth rate-limit blocks spiked"
+          description: "More than 50 auth requests were rate-limited in the last 5 minutes — possible credential-stuffing or abuse."
+
+  - name: ozzb2b-host
+    rules:
+      - alert: HostHighCPU
+        expr: 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU > 85% for 10m"
+          description: "VPS CPU usage has been above 85% for 10 minutes — workers may be saturated."
+
+      - alert: HostHighMemory
+        expr: |
+          100 * (1 -
+            node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+          ) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host memory > 90% used (10m)"
+          description: "VPS memory usage has been above 90% for 10 minutes — risk of OOM kills."
+
+      - alert: HostDiskSpaceLow
+        expr: |
+          100 * (
+            1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+                / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) > 85
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage > 85% on {{ $labels.mountpoint }}"
+          description: "{{ $labels.mountpoint }} on {{ $labels.instance }} is above 85% full for 15 minutes."
+
+      - alert: HostDiskSpaceCritical
+        expr: |
+          100 * (
+            1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+                / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) > 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk almost full on {{ $labels.mountpoint }}"
+          description: "{{ $labels.mountpoint }} on {{ $labels.instance }} is above 95% full."
+
+  - name: ozzb2b-containers
+    rules:
+      - alert: ContainerHighMemory
+        expr: |
+          (
+            container_memory_working_set_bytes{name!="",name!~"POD|"}
+              / container_spec_memory_limit_bytes{name!="",name!~"POD|"}
+          ) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} using > 90% of its memory limit"
+          description: "Container {{ $labels.name }} sits above 90% of its configured memory limit for 10 minutes — likely to be OOM-killed."
+
+      - alert: ContainerRestartingFrequently
+        expr: changes(container_start_time_seconds{name!=""}[30m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarting frequently"
+          description: "{{ $labels.name }} restarted more than 3 times in the last 30 minutes."

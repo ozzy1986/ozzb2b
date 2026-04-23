@@ -5,6 +5,9 @@
 !.env.prod.example
 *.local
 credentials.json
+# Alertmanager config is rendered on the VPS from the .tmpl file with secrets
+# injected from /root/.ozzb2b_secrets. Never commit the rendered file.
+infra/alertmanager/alertmanager.yml
 
 # ---- Legacy WordPress secrets ----
 wp-config.php

@@ -62,6 +62,21 @@ OZZB2B_GRAFANA_ADMIN_PASSWORD=${OZZB2B_GRAFANA_ADMIN_PASSWORD:-change_me_in_prod
 EOF
 chmod 600 .env.prod
 
+log "render alertmanager.yml from template (if Telegram creds present)"
+if [ -n "${OZZB2B_TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${OZZB2B_TELEGRAM_CHAT_ID:-}" ]; then
+    # Use envsubst-free sed to avoid extra deps; tokens / chat id never go through
+    # the shell's history (both live in /root/.ozzb2b_secrets, root-owned 600).
+    sed \
+        -e "s|__TELEGRAM_BOT_TOKEN__|${OZZB2B_TELEGRAM_BOT_TOKEN}|g" \
+        -e "s|__TELEGRAM_CHAT_ID__|${OZZB2B_TELEGRAM_CHAT_ID}|g" \
+        infra/alertmanager/alertmanager.yml.tmpl \
+        > infra/alertmanager/alertmanager.yml
+    chmod 640 infra/alertmanager/alertmanager.yml
+    log "alertmanager.yml rendered"
+else
+    log "telegram creds missing in /root/.ozzb2b_secrets — alertmanager will be skipped"
+fi
+
 log "sync nginx vhosts"
 # Existing vhost file on the VPS is /etc/nginx/sites-{available,enabled}/<host>
 # (no .conf suffix). Write to that exact path to avoid ending up with two vhosts.
@@ -84,6 +99,10 @@ rm -f /etc/nginx/sites-available/ozzb2b.com.conf     /etc/nginx/sites-enabled/oz
 nginx -t && systemctl reload nginx
 
 log "docker compose up --build"
-docker compose -f compose.prod.yml up -d --build
+compose_args=(-f compose.prod.yml)
+if [ -f infra/alertmanager/alertmanager.yml ]; then
+    compose_args+=(--profile alerts)
+fi
+docker compose "${compose_args[@]}" up -d --build
 
 docker compose -f compose.prod.yml ps

@@ -1,0 +1,214 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Host CPU %",
+      "id": 1,
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 70},
+              {"color": "red", "value": 90}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value"}
+    },
+    {
+      "type": "stat",
+      "title": "Host memory %",
+      "id": 2,
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 80},
+              {"color": "red", "value": 90}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value"}
+    },
+    {
+      "type": "stat",
+      "title": "Root disk %",
+      "id": 3,
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 80},
+              {"color": "red", "value": 90}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value"}
+    },
+    {
+      "type": "stat",
+      "title": "Swap used %",
+      "id": 4,
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "100 * (1 - node_memory_SwapFree_bytes / clamp_min(node_memory_SwapTotal_bytes, 1))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value"}
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU usage per mode",
+      "id": 10,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "sum by (mode) (rate(node_cpu_seconds_total{mode!=\"idle\"}[1m]))",
+          "refId": "A",
+          "legendFormat": "{{mode}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory breakdown",
+      "id": 11,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "refId": "A",
+          "legendFormat": "used"
+        },
+        {
+          "expr": "node_memory_Cached_bytes + node_memory_Buffers_bytes",
+          "refId": "B",
+          "legendFormat": "cache+buffers"
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "refId": "C",
+          "legendFormat": "available"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "Container CPU (cores)",
+      "id": 20,
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[1m]))",
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "right"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Container memory (bytes)",
+      "id": 21,
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "container_memory_working_set_bytes{name!=\"\"}",
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "right"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Network traffic (bytes/s)",
+      "id": 30,
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|docker.*|br-.*|veth.*\"}[1m]))",
+          "refId": "A",
+          "legendFormat": "in"
+        },
+        {
+          "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|br-.*|veth.*\"}[1m]))",
+          "refId": "B",
+          "legendFormat": "out"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["ozzb2b", "host"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "ozzb2b — host & containers",
+  "uid": "ozzb2b-host",
+  "version": 1,
+  "weekStart": ""
+}
