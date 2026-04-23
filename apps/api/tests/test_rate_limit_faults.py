@@ -20,28 +20,28 @@ class _FailingRedis:
     def __init__(self, exc: BaseException) -> None:
         self._exc = exc
 
-    async def incr(self, key: str) -> int:  # noqa: ARG002
+    async def incr(self, _key: str) -> int:
         raise self._exc
 
-    async def expire(self, key: str, ttl: int) -> int:  # noqa: ARG002
+    async def expire(self, _key: str, _ttl: int) -> int:
         raise self._exc
 
-    async def ttl(self, key: str) -> int:  # noqa: ARG002
+    async def ttl(self, _key: str) -> int:
         raise self._exc
 
 
 class _SlowRedis:
     """Redis stub that hangs forever; we wrap it in asyncio.wait_for ourselves."""
 
-    async def incr(self, key: str) -> int:  # noqa: ARG002
+    async def incr(self, _key: str) -> int:
         await asyncio.sleep(3600)
         return 0
 
-    async def expire(self, key: str, ttl: int) -> int:  # noqa: ARG002
+    async def expire(self, _key: str, _ttl: int) -> int:
         await asyncio.sleep(3600)
         return 0
 
-    async def ttl(self, key: str) -> int:  # noqa: ARG002
+    async def ttl(self, _key: str) -> int:
         await asyncio.sleep(3600)
         return -2
 
