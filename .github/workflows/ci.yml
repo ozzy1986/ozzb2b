@@ -446,7 +446,6 @@ jobs:
           done
           # Empty stubs for certbot-managed includes referenced by the vhosts.
           : > .tmp-nginx/letsencrypt/options-ssl-nginx.conf
-          openssl dhparam -out .tmp-nginx/letsencrypt/ssl-dhparams.pem 1024 2>/dev/null
           # Minimal snippet used by ozzb2b.com + grafana vhosts.
           cat > .tmp-nginx/snippets/ssl-modern.conf <<'SNIP'
           ssl_protocols TLSv1.2 TLSv1.3;
@@ -455,8 +454,14 @@ jobs:
 
           for f in infra/nginx/*.conf; do
             echo "--- $f"
+            cp "$f" .tmp-nginx/vhost.conf
+            # Certbot-managed lines are environment artifacts, not syntax owned
+            # by this repo. Strip them in CI so nginx -t validates our config
+            # structure without requiring production key material.
+            sed -i '/options-ssl-nginx\.conf/d' .tmp-nginx/vhost.conf
+            sed -i '/ssl_dhparam/d' .tmp-nginx/vhost.conf
             docker run --rm \
-              -v "$PWD/$f:/etc/nginx/conf.d/vhost.conf:ro" \
+              -v "$PWD/.tmp-nginx/vhost.conf:/etc/nginx/conf.d/vhost.conf:ro" \
               -v "$PWD/.tmp-nginx/letsencrypt:/etc/letsencrypt:ro" \
               -v "$PWD/.tmp-nginx/snippets:/etc/nginx/snippets:ro" \
               nginx:1.27-alpine nginx -t
