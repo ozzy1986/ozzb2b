@@ -222,10 +222,19 @@ cd apps/scraper && pytest                      # coverage
 Or run everything from the repo root:
 
 ```bash
-make install       # install every language toolchain
-make test          # run every unit/integration suite
-make coverage      # enforce per-service coverage thresholds
-make lint          # ruff + mypy + tsc + go vet + clippy + rustfmt
+make install                 # install every language toolchain
+make test                    # run every unit suite
+make coverage                # enforce per-service coverage thresholds
+make lint                    # ruff + mypy + tsc + go vet + clippy + rustfmt
+make test-api-integration    # requires Postgres + Redis; see env vars below
+make test-e2e                # builds web, installs browsers, runs Playwright
+```
+
+Integration tests read their connection strings from the environment:
+
+```bash
+OZZB2B_INTEGRATION_DATABASE_URL=postgresql+asyncpg://ozzb2b:ozzb2b@127.0.0.1:5432/ozzb2b_test
+OZZB2B_INTEGRATION_REDIS_URL=redis://127.0.0.1:6379/0
 ```
 
 Optional pre-commit hooks (Python + secret scan + large file guard) are
@@ -253,12 +262,25 @@ All work in `apps/` is guarded by a matching CI job in
 
 Extra CI gates:
 
+- **integration api** — hard gate. Spins up Postgres 16 + Redis 7 as services
+  and runs `tests/integration` (TSVECTOR / JSONB / UUID / native enums / real
+  rate limiter) so ORM and cache changes that silently work on SQLite but
+  break on Postgres are caught before deploy.
+- **e2e (playwright, 3 viewports)** — hard gate. Builds the web app and runs
+  a Playwright smoke suite on mobile (iPhone 13), tablet (iPad), and desktop
+  Chrome against an intentionally unreachable API — we verify that page
+  shells, routing, and HTML5 validation never regress.
+- **coverage diff (changed lines)** — on pull requests, `diff-cover` enforces
+  ≥85% coverage on changed Python lines; web diff-coverage is tracked
+  informationally until the vitest suite grows.
+- **secret scan (gitleaks)** — hard gate. Any leaked credential fails the
+  build; zero tolerance.
 - **proto drift** — regenerates Python stubs from `proto/` and fails if the
   committed `grpc_gen/` files don't match.
 - **docker-build matrix** — builds every service's Dockerfile to catch
   packaging-only regressions.
-- **security** — `pip-audit` + `bandit` for Python, `govulncheck` for Go,
-  `cargo audit` for Rust, Trivy filesystem scan, and gitleaks secret scan.
+- **security (informational)** — `pip-audit` + `bandit` for Python,
+  `govulncheck` for Go, `cargo audit` for Rust, Trivy filesystem scan.
 
 ---
 

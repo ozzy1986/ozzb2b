@@ -1,4 +1,4 @@
-.PHONY: help install test test-api test-web test-chat test-events test-matcher test-scraper lint typecheck coverage docker-build clean
+.PHONY: help install test test-api test-api-integration test-web test-chat test-events test-matcher test-scraper test-e2e lint typecheck coverage docker-build clean
 
 help:
 	@echo "Common targets:"
@@ -10,6 +10,9 @@ help:
 	@echo "  make test-events    - go test for apps/events"
 	@echo "  make test-matcher   - cargo test for apps/matcher"
 	@echo "  make test-scraper   - pytest for apps/scraper"
+	@echo "  make test-api-integration"
+	@echo "                      - pytest integration suite (needs Postgres + Redis)"
+	@echo "  make test-e2e       - Playwright smoke suite (needs built web app)"
 	@echo "  make lint           - run all linters"
 	@echo "  make typecheck      - mypy + tsc + clippy"
 	@echo "  make coverage       - run everything with coverage enabled"
@@ -41,6 +44,16 @@ test-matcher:
 
 test-scraper:
 	cd apps/scraper && pytest
+
+test-api-integration:
+	@if [ -z "$$OZZB2B_INTEGRATION_DATABASE_URL" ] || [ -z "$$OZZB2B_INTEGRATION_REDIS_URL" ]; then \
+		echo "Set OZZB2B_INTEGRATION_DATABASE_URL and OZZB2B_INTEGRATION_REDIS_URL first."; exit 1; \
+	fi
+	cd apps/api && pytest tests/integration -m integration -v --no-cov
+
+test-e2e:
+	cd apps/web && npm run build
+	cd apps/e2e && npm install --no-audit --no-fund && npx playwright install --with-deps chromium webkit && npx playwright test
 
 lint:
 	cd apps/api && ruff check . && mypy src

@@ -50,8 +50,15 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "-ra -q --strict-markers --cov=src/ozzb2b_api --cov-report=term-missing --cov-report=xml --cov-fail-under=60"
+# Unit suite: fast, hermetic, no external services. Integration tests are
+# tagged with the `integration` marker and filtered out here so the default
+# `pytest` run stays green without Postgres/Redis. Opt in with
+# `pytest tests/integration -m integration`.
+addopts = "-ra -q --strict-markers --cov=src/ozzb2b_api --cov-report=term-missing --cov-report=xml --cov-fail-under=60 -m 'not integration'"
 testpaths = ["tests"]
+markers = [
+    "integration: requires a real Postgres + Redis (opt-in)",
+]
 
 [tool.coverage.run]
 branch = true
