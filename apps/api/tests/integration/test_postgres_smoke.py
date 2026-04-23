@@ -17,7 +17,7 @@ pytestmark = pytest.mark.integration
 
 
 async def test_create_and_query_provider_with_jsonb(db_session: AsyncSession) -> None:
-    country = Country(code="RU", name="Россия")
+    country = Country(code="RU", name="Россия", slug="ru")
     db_session.add(country)
     await db_session.flush()
 
@@ -43,7 +43,7 @@ async def test_create_and_query_provider_with_jsonb(db_session: AsyncSession) ->
 
 
 async def test_tsvector_column_accepts_fts_query(db_session: AsyncSession) -> None:
-    country = Country(code="RU", name="Россия")
+    country = Country(code="RU", name="Россия", slug="ru")
     db_session.add(country)
     await db_session.flush()
 
@@ -82,7 +82,7 @@ async def test_tsvector_column_accepts_fts_query(db_session: AsyncSession) -> No
 
 
 async def test_unique_source_source_id_is_enforced(db_session: AsyncSession) -> None:
-    country = Country(code="RU", name="Россия")
+    country = Country(code="RU", name="Россия", slug="ru")
     db_session.add(country)
     await db_session.flush()
 
