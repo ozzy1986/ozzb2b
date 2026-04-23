@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// `__dirname` isn't defined in ESM; derive it from `import.meta.url`.
+// This works in both CJS (Windows local) and ESM (Linux CI) resolution modes.
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   esbuild: {
@@ -11,7 +16,7 @@ export default defineConfig({
     // location where this repo keeps reusable code). App routes are tested
     // through Playwright / integration flows rather than vitest.
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(here, 'src'),
     },
   },
   test: {

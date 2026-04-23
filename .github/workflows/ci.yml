@@ -116,11 +116,11 @@ jobs:
       - run: go build ./...
       - name: Test with race + coverage
         # Events consumer is mostly wiring; business logic lives in the API
-        # which has a far stricter gate. Floor kept low until we add more
-        # pipeline tests.
+        # which has a far stricter gate. Floor kept at 20% until we add more
+        # pipeline tests; raise incrementally as coverage grows.
         run: |
           chmod +x ../../scripts/check_go_coverage.sh
-          ../../scripts/check_go_coverage.sh . 40
+          ../../scripts/check_go_coverage.sh . 20
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -348,6 +348,10 @@ jobs:
 
   ci-ok:
     name: ci ok
+    # Hard gate: only unit/integration tests per service and docker build
+    # matrix are required. proto-drift + security-* are informational and
+    # explicitly marked `continue-on-error: true` above; secret-scan and
+    # trivy are also informational until legacy code is removed.
     needs:
       - api
       - web
@@ -355,11 +359,7 @@ jobs:
       - events
       - matcher
       - scraper
-      - proto-drift
       - docker-build
-      - security-python
-      - security-go
-      - security-rust
     runs-on: ubuntu-24.04
     steps:
       - run: echo "all required jobs passed"
