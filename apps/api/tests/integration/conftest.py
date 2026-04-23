@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from ozzb2b_api.config import Settings
 from ozzb2b_api.db import models  # noqa: F401 — register ORM metadata
@@ -64,19 +65,54 @@ def integration_settings(
     )
 
 
-@pytest_asyncio.fixture(scope="session")
+def _prepare_schema(integration_database_url: str) -> None:
+    """Drop + recreate the full schema in a dedicated short-lived loop.
+
+    asyncpg connections bind to the asyncio event loop they're created in,
+    so any engine opened inside pytest-asyncio's per-test loop would later
+    leak a dead connection into a different loop. Running setup via
+    ``asyncio.run`` gives us an isolated loop that fully closes before the
+    test session hands control to pytest-asyncio.
+    """
+    import asyncio
+
+    async def _run() -> None:
+        engine = create_async_engine(
+            integration_database_url, future=True, poolclass=NullPool
+        )
+        try:
+            async with engine.begin() as conn:
+                # pg_trgm powers similarity search; mirror the prod migration
+                # so create_all stays compatible with any index we add later.
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+                await conn.run_sync(Base.metadata.drop_all)
+                await conn.run_sync(Base.metadata.create_all)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_run())
+
+
+@pytest.fixture(scope="session")
+def _schema_ready(integration_database_url: str) -> None:
+    """Create the schema exactly once per session, outside any async loop."""
+    _prepare_schema(integration_database_url)
+
+
+@pytest_asyncio.fixture()
 async def integration_engine(
-    integration_settings: Settings,
+    integration_settings: Settings, _schema_ready: None
 ) -> AsyncIterator[AsyncEngine]:
-    """Fresh schema per session so tests never observe stale state."""
-    engine = create_async_engine(integration_settings.database_url, future=True)
-    async with engine.begin() as conn:
-        # pg_trgm powers similarity search; the prod migration enables it too,
-        # so we mirror that here to keep create_all compatible with any index
-        # we later add on top of it.
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    """Fresh async engine per test.
+
+    We use ``NullPool`` so no connection outlives the test's event loop,
+    which is what triggered the earlier "another operation is in progress"
+    / "attached to a different loop" asyncpg failures when the engine was
+    session-scoped.
+    """
+    engine = create_async_engine(
+        integration_settings.database_url, future=True, poolclass=NullPool
+    )
     try:
         yield engine
     finally:
