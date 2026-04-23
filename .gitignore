@@ -49,6 +49,10 @@ out/
 .pnpm-store/
 # vitest v8 coverage output
 apps/web/coverage/
+# Web lockfile is deliberately not committed: Windows-generated lockfiles
+# can omit Linux-only rollup native binaries (npm bug #4828). Each
+# environment regenerates its own lockfile on first install.
+apps/web/package-lock.json
 
 # ---- Go ----
 /apps/chat/bin/

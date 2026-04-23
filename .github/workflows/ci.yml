@@ -56,8 +56,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          # Lockfile isn't committed (see apps/web/.gitignore comment); cache
+          # key tracks package.json so we still get a warm npm cache hit
+          # when dependency declarations don't change.
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
+          cache-dependency-path: apps/web/package.json
       - name: Install
         # Lock file resolved with --legacy-peer-deps (react 19 RC peers), so
         # use the same flag here; `npm ci` would drop extraneous deps but

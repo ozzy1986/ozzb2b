@@ -1,13 +1,11 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY package.json ./
 # React 19 RC + @testing-library/react 16 require --legacy-peer-deps.
+# Lockfile is intentionally not committed; the image generates its own on
+# each build so rollup's platform-specific optional binaries resolve.
 RUN --mount=type=cache,target=/root/.npm \
-    if [ -f package-lock.json ]; then \
-        npm ci --legacy-peer-deps --no-audit --no-fund; \
-    else \
-        npm install --legacy-peer-deps --no-audit --no-fund; \
-    fi
+    npm install --legacy-peer-deps --no-audit --no-fund
 
 FROM node:22-alpine AS builder
 WORKDIR /app
