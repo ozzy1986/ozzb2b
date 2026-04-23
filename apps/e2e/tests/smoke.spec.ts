@@ -9,7 +9,11 @@ test.describe('site smoke', () => {
       page.getByRole('heading', { level: 1, name: /B2B-подрядчика/i }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Искать' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Компании' })).toBeVisible();
+    // Use exact match: the page also renders a "Все компании →" link which
+    // otherwise trips Playwright's strict-mode matcher on "Компании".
+    await expect(
+      page.getByRole('link', { name: 'Компании', exact: true }),
+    ).toBeVisible();
   });
 
   test('login page shows client-side validation on empty submit', async ({ page }) => {
