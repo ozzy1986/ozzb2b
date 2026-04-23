@@ -53,11 +53,11 @@ scrape_configs:
     static_configs:
       - targets: ["matcher:8090"]
 
-  # Host metrics (node_exporter runs in host network mode on 127.0.0.1:9100).
-  # Prometheus reaches the host via the default Docker bridge gateway.
+  # Host metrics: node_exporter runs inside the compose network with host /proc,
+  # /sys and / bind-mounted read-only + pid=host, so the numbers reflect the VPS.
   - job_name: host
     static_configs:
-      - targets: ["host.docker.internal:9100"]
+      - targets: ["node_exporter:9100"]
         labels:
           role: host
 

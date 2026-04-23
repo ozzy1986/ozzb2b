@@ -66,7 +66,7 @@ def test_overview_dashboard_references_provisioned_datasource_uids() -> None:
 def test_prometheus_scrapes_host_and_containers() -> None:
     text = PROM_CONFIG.read_text(encoding="utf-8")
     # node_exporter for host metrics, cAdvisor for per-container metrics.
-    assert "host.docker.internal:9100" in text
+    assert "node_exporter:9100" in text
     assert "cadvisor:8080" in text
 
 
