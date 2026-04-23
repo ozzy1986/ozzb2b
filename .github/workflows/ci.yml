@@ -65,7 +65,11 @@ jobs:
         # Lock file resolved with --legacy-peer-deps (react 19 RC peers), so
         # use the same flag here; `npm ci` would drop extraneous deps but
         # it refuses the existing lockfile when dependency graphs shift.
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          # npm optional deps may be skipped in CI; install rollup native
+          # binary explicitly to avoid flaky startup failures.
+          npm install --no-save @rollup/rollup-linux-x64-gnu
       - name: Typecheck
         run: npm run typecheck
       - name: Diagnostic
@@ -217,7 +221,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends protobuf-compiler
           python -m pip install --upgrade pip
-          pip install "grpcio-tools>=1.67,<2"
+          pip install "grpcio-tools==1.67.1" "protobuf==5.27.2"
       - name: Regenerate Python stubs from proto/
         run: |
           mkdir -p .tmp-gen
@@ -336,7 +340,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.32.0
         with:
           scan-type: fs
           scan-ref: .
