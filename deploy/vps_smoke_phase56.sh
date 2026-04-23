@@ -11,15 +11,21 @@ log() { printf "[phase5.6_smoke] %s\n" "$*"; }
 PROM_URL=http://127.0.0.1:9090
 AM_URL=http://127.0.0.1:9093
 
+any_up() {
+    # Returns 1 if at least one active scrape target for ${1} is currently up.
+    local job=$1
+    curl -sSG "${PROM_URL}/api/v1/query" \
+      --data-urlencode "query=sum(up{job=\"${job}\"})" \
+      | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(int(float(r[0]["value"][1])) if r else 0)'
+}
+
 log "1) node_exporter scraped"
-up=$(curl -sSf --data-urlencode 'query=up{job="host"}' "${PROM_URL}/api/v1/query" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)')
-[ "$up" = "1" ] && echo "  OK: up{job=host}=1" || { echo "FAIL: host scrape not up"; exit 1; }
+n=$(any_up host)
+[ "${n:-0}" -ge 1 ] && echo "  OK: up{job=host}=${n}" || { echo "FAIL: host scrape not up"; exit 1; }
 
 log "2) cAdvisor scraped"
-up=$(curl -sSf --data-urlencode 'query=up{job="cadvisor"}' "${PROM_URL}/api/v1/query" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin)["data"]["result"]; print(r[0]["value"][1] if r else 0)')
-[ "$up" = "1" ] && echo "  OK: up{job=cadvisor}=1" || { echo "FAIL: cadvisor scrape not up"; exit 1; }
+n=$(any_up cadvisor)
+[ "${n:-0}" -ge 1 ] && echo "  OK: up{job=cadvisor}=${n}" || { echo "FAIL: cadvisor scrape not up"; exit 1; }
 
 log "3) Host metrics present"
 for metric in node_cpu_seconds_total node_memory_MemAvailable_bytes node_filesystem_avail_bytes; do

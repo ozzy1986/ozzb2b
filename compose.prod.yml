@@ -225,8 +225,11 @@ services:
     mem_reservation: 32m
 
   # Per-container CPU/RAM/disk/network + Docker stats.
+  # Pinned to v0.47.2: newer 0.49.x versions have a known bug with Docker's
+  # overlay2 storage driver where they look for layer metadata under the
+  # wrong path and end up publishing only the root cgroup series.
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
     container_name: ozzb2b-cadvisor
     restart: unless-stopped
     privileged: true
