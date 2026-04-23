@@ -12,7 +12,7 @@ def run() -> None:
     # Listen on all interfaces inside the container so the host / reverse proxy can reach uvicorn.
     uvicorn.run(
         "ozzb2b_api.app:app",
-        host="0.0.0.0",  # noqa: S104
+        host="0.0.0.0",  # noqa: S104  # nosec B104 - container ingress, bound via docker network
         port=8000,
         reload=not settings.is_production,
         log_level=settings.log_level.lower(),

@@ -17,9 +17,9 @@ import jwt
 
 from ozzb2b_api.config import Settings, get_settings
 
-TOKEN_TYPE_ACCESS = "access"
-TOKEN_TYPE_REFRESH = "refresh"
-TOKEN_TYPE_WS_CHAT = "ws_chat"
+TOKEN_TYPE_ACCESS = "access"  # nosec B105 - token type label, not a credential
+TOKEN_TYPE_REFRESH = "refresh"  # nosec B105 - token type label, not a credential
+TOKEN_TYPE_WS_CHAT = "ws_chat"  # nosec B105 - token type label, not a credential
 WS_CHAT_TTL_SECONDS = 120  # handshake-only; the live WS connection lives longer
 
 

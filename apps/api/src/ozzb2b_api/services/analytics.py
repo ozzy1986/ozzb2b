@@ -46,6 +46,8 @@ def _window_clause(days: int) -> str:
 
 
 async def event_type_counts(days: int) -> list[EventTypeCount]:
+    # nosec B608 - the only interpolated value is produced by _window_clause,
+    # which clamps an int to [1, 365]; there is no user-controlled string here.
     sql = f"""
         SELECT
             event_type AS event_type,
@@ -54,7 +56,7 @@ async def event_type_counts(days: int) -> list[EventTypeCount]:
         WHERE {_window_clause(days)}
         GROUP BY event_type
         ORDER BY cnt DESC
-    """
+    """  # nosec B608
     try:
         rows = await query_json(sql)
     except ClickHouseUnavailableError as exc:
@@ -67,6 +69,8 @@ async def event_type_counts(days: int) -> list[EventTypeCount]:
 
 
 async def top_searches(days: int, limit: int) -> list[TopQuery]:
+    # nosec B608 - interpolated values are int-only (_window_clause + clamped
+    # LIMIT via max/min); no user string reaches the query.
     sql = f"""
         SELECT
             JSONExtractString(properties, 'query') AS query,
@@ -77,7 +81,7 @@ async def top_searches(days: int, limit: int) -> list[TopQuery]:
         HAVING length(query) > 0
         ORDER BY cnt DESC
         LIMIT {max(1, min(limit, 200))}
-    """
+    """  # nosec B608
     try:
         rows = await query_json(sql)
     except ClickHouseUnavailableError as exc:
@@ -90,6 +94,8 @@ async def top_searches(days: int, limit: int) -> list[TopQuery]:
 
 
 async def top_providers(days: int, limit: int) -> list[TopProvider]:
+    # nosec B608 - same rationale as top_searches: interpolated values are
+    # strictly int-bounded and never carry user-provided strings.
     sql = f"""
         SELECT
             JSONExtractString(properties, 'provider_id') AS provider_id,
@@ -102,7 +108,7 @@ async def top_providers(days: int, limit: int) -> list[TopProvider]:
         HAVING length(provider_id) > 0
         ORDER BY cnt DESC
         LIMIT {max(1, min(limit, 200))}
-    """
+    """  # nosec B608
     try:
         rows: list[dict[str, Any]] = await query_json(sql)
     except ClickHouseUnavailableError as exc:
