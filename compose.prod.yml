@@ -140,6 +140,7 @@ services:
         hard: 262144
     volumes:
       - /var/www/ozzb2b.com/data/clickhouse:/var/lib/clickhouse
+      - ./infra/clickhouse/disable_system_logs.xml:/etc/clickhouse-server/config.d/disable_system_logs.xml:ro
     mem_limit: 1g
     mem_reservation: 384m
     healthcheck:
