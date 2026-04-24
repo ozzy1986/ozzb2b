@@ -65,12 +65,12 @@ def _is_safe_ip(addr: str) -> bool:
 
 def _resolve(host: str) -> list[str]:
     try:
-        return [
-            info[4][0]
-            for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-        ]
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
         raise UnsafeUrlError(f"could not resolve host {host!r}: {exc}") from exc
+    # getaddrinfo returns IPv4 and IPv6 records whose sockaddr tuples have
+    # different shapes; the address is always the first element.
+    return [str(info[4][0]) for info in infos]
 
 
 def _registered_domain(host: str) -> str:

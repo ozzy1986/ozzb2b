@@ -67,7 +67,7 @@ def _decode_with_audience(
     ≤2 min for ws_chat) the shim is dead code and can be removed.
     """
     try:
-        return jwt.decode(  # type: ignore[no-any-return]
+        return jwt.decode(
             token,
             cfg.jwt_secret,
             algorithms=[cfg.jwt_algorithm],
@@ -83,7 +83,7 @@ def _decode_with_audience(
         if exc.claim not in {"iss", "aud"}:
             raise TokenError(str(exc)) from exc
         try:
-            return jwt.decode(  # type: ignore[no-any-return]
+            return jwt.decode(
                 token,
                 cfg.jwt_secret,
                 algorithms=[cfg.jwt_algorithm],

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -111,7 +111,8 @@ async def list_categories_endpoint(db: DbSession) -> list[CategoryPublic]:
         loader=_load,
         encode=lambda items: [c.model_dump(mode="json") for c in items],
         decode=lambda raw: [
-            CategoryPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+            CategoryPublic.model_validate(c)
+            for c in cast(list[dict[str, object]], raw)
         ],
     )
 
@@ -155,7 +156,8 @@ async def list_countries_endpoint(db: DbSession) -> list[CountryPublic]:
         loader=_load,
         encode=lambda items: [c.model_dump(mode="json") for c in items],
         decode=lambda raw: [
-            CountryPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+            CountryPublic.model_validate(c)
+            for c in cast(list[dict[str, object]], raw)
         ],
     )
 
@@ -175,7 +177,8 @@ async def list_cities_endpoint(
         loader=_load,
         encode=lambda items: [c.model_dump(mode="json") for c in items],
         decode=lambda raw: [
-            CityPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+            CityPublic.model_validate(c)
+            for c in cast(list[dict[str, object]], raw)
         ],
     )
 
@@ -195,6 +198,7 @@ async def list_legal_forms_endpoint(
         loader=_load,
         encode=lambda items: [c.model_dump(mode="json") for c in items],
         decode=lambda raw: [
-            LegalFormPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+            LegalFormPublic.model_validate(c)
+            for c in cast(list[dict[str, object]], raw)
         ],
     )

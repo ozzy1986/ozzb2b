@@ -20,6 +20,18 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
+# Remove build-time tools that Next's standalone runtime does not need. This
+# shrinks the attack surface (npm bundles its own transitive deps like
+# picomatch that Trivy otherwise flags on every scan) and aligns with the
+# "runtime image should only contain what runs" rule.
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack \
+    /opt/yarn-*
+
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 
