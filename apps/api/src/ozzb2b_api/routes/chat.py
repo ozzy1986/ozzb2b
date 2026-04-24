@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from ozzb2b_api.clients.events import (
     EVENT_CHAT_MESSAGE_SENT,
@@ -29,6 +29,7 @@ from ozzb2b_api.schemas.chat import (
     StartConversationRequest,
     WsToken,
 )
+from ozzb2b_api.security.rate_limit import enforce_rate_limit
 from ozzb2b_api.security.tokens import create_ws_chat_token
 from ozzb2b_api.services import chat as chat_service
 
@@ -207,10 +208,21 @@ async def send_message_endpoint(
 )
 async def issue_ws_token(
     conversation_id: uuid.UUID,
+    request: Request,
+    response: Response,
     db: DbSession,
     current_user: Annotated[User, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> WsToken:
+    # WS handshake tokens are short-lived but cheap to mint, so we cap how
+    # often a single user can grind them out to dampen abuse.
+    await enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="ws_token",
+        limit=settings.rate_limit_ws_token_max,
+        user_scope=str(current_user.id),
+    )
     try:
         await chat_service.ensure_conversation_access(
             db, viewer=current_user, conversation_id=conversation_id

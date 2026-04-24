@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getProvider, listMyProviders } from '@/lib/api';
 import { authHeaders } from '@/lib/server-fetch';
+import { requireAuthCookie } from '@/lib/auth-guard';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { OwnedProviderEditor } from '@/components/OwnedProviderEditor';
 
@@ -19,10 +19,7 @@ type RouteParams = Promise<{ slug: string }>;
 
 export default async function OwnedProviderEditPage({ params }: { params: RouteParams }) {
   const { slug } = await params;
-  const jar = await cookies();
-  if (!jar.get('ozzb2b_at')) {
-    redirect(`/login?next=${encodeURIComponent(`/account/companies/${slug}`)}`);
-  }
+  await requireAuthCookie(`/account/companies/${slug}`);
 
   const headers = await authHeaders();
   const [mine, provider] = await Promise.all([

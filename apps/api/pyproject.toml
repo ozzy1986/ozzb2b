@@ -74,7 +74,11 @@ asyncio_mode = "auto"
 # tagged with the `integration` marker and filtered out here so the default
 # `pytest` run stays green without Postgres/Redis. Opt in with
 # `pytest tests/integration -m integration`.
-addopts = "-ra -q --strict-markers --cov=src/ozzb2b_api --cov-report=term-missing --cov-report=xml --cov-fail-under=60 -m 'not integration'"
+# Threshold ratchet: bump only when several consecutive runs comfortably
+# clear the new floor; never lower it without an explicit, justified PR.
+# diff-cover at 90% on changed lines (see .github/workflows/ci.yml) keeps
+# new code at a stricter bar than the catch-all floor here.
+addopts = "-ra -q --strict-markers --cov=src/ozzb2b_api --cov-report=term-missing --cov-report=xml --cov-fail-under=65 -m 'not integration'"
 testpaths = ["tests"]
 markers = [
     "integration: requires a real Postgres + Redis (opt-in)",

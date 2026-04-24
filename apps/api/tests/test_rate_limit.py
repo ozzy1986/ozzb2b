@@ -62,11 +62,24 @@ async def test_fail_open_on_redis_error() -> None:
     assert outcome.remaining == 3
 
 
-def test_client_ip_prefers_forwarded_header() -> None:
+def test_client_ip_uses_xff_when_proxy_count_set() -> None:
+    # Chain layout: ``<original-client>, <trusted-nginx>``. With one trusted
+    # hop we skip the rightmost entry (our nginx) and pick the one to its
+    # left as the real client.
     headers: dict[str, str] = {
         "x-forwarded-for": "203.0.113.1, 10.0.0.1",
     }
-    assert client_ip(headers, "192.168.0.1") == "203.0.113.1"
+    assert (
+        client_ip(headers, "192.168.0.1", trusted_proxy_count=1) == "203.0.113.1"
+    )
+
+
+def test_client_ip_ignores_xff_by_default() -> None:
+    """Without trusted_proxy_count we never trust XFF — see test_xff_trust.py."""
+    headers: dict[str, str] = {
+        "x-forwarded-for": "203.0.113.1, 10.0.0.1",
+    }
+    assert client_ip(headers, "192.168.0.1") == "192.168.0.1"
 
 
 def test_client_ip_falls_back_to_peer() -> None:

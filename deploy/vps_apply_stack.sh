@@ -105,4 +105,46 @@ if [ -f infra/alertmanager/alertmanager.yml ]; then
 fi
 docker compose "${compose_args[@]}" up -d --build
 
+# Wait for the API container to become healthy before running migrations
+# against it. The compose healthcheck targets /health which doesn't touch
+# the DB, so we additionally probe /ready (which does) before applying
+# migrations to fail fast if the container can't reach Postgres at all.
+log "wait for api /ready"
+ready=0
+for _ in $(seq 1 30); do
+    if docker compose -f compose.prod.yml exec -T api \
+        python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ready',timeout=2).getcode()==200 else 1)" \
+        >/dev/null 2>&1; then
+        ready=1
+        break
+    fi
+    sleep 2
+done
+if [ "$ready" -ne 1 ]; then
+    log "api /ready never returned 200; aborting before migrations"
+    docker compose -f compose.prod.yml ps
+    exit 1
+fi
+
+# Always run migrations after the new image is up. Alembic upgrades are
+# additive in this codebase (expand-then-contract pattern), so re-running an
+# already-applied migration is a no-op. Doing this in the deploy script
+# means a fresh release never serves traffic against an out-of-date schema.
+log "run alembic migrations"
+bash deploy/vps_migrate.sh
+
+# Run the latest smoke suite so a regression in container start-up,
+# nginx routing or core flow trips the deploy here instead of being
+# noticed by users. Fall through if no phase smoke script exists yet.
+latest_smoke=$(ls deploy/vps_smoke_phase*.sh 2>/dev/null | sort -V | tail -n1 || true)
+if [ -n "${latest_smoke:-}" ] && [ -x "$latest_smoke" ]; then
+    log "post-deploy smoke: $latest_smoke"
+    if ! bash "$latest_smoke"; then
+        log "smoke failed; rolling back to previous git ref"
+        git reset --hard HEAD@{1} || true
+        docker compose "${compose_args[@]}" up -d --build
+        exit 1
+    fi
+fi
+
 docker compose -f compose.prod.yml ps

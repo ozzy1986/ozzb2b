@@ -16,8 +16,9 @@ const DETAIL_MAP: Record<string, string> = {
   'missing refresh token': 'Сессия истекла. Войдите снова.',
   'invalid subject': 'Сессия недействительна. Войдите снова.',
   'user not found': 'Пользователь не найден.',
-  'email already registered': 'Пользователь с таким email уже зарегистрирован.',
-  'invalid email or password': 'Неверный email или пароль.',
+  'email already registered':
+    'Пользователь с такой электронной почтой уже зарегистрирован.',
+  'invalid email or password': 'Неверный адрес электронной почты или пароль.',
   'refresh token not found': 'Сессия недействительна. Войдите снова.',
   'refresh token already used': 'Сессия недействительна. Войдите снова.',
   'refresh token expired': 'Сессия истекла. Войдите снова.',
@@ -136,7 +137,7 @@ export function humanizeError(
         return 'Пароль должен быть не короче 10 символов.';
       }
       if (d.includes('email')) {
-        return 'Проверьте корректность email.';
+        return 'Проверьте корректность адреса электронной почты.';
       }
     }
     if (err.detail) {

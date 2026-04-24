@@ -16,7 +16,9 @@ Design notes (SOLID / KISS):
 
 from __future__ import annotations
 
+import asyncio
 import json
+import secrets
 import threading
 import uuid
 from collections.abc import Mapping
@@ -80,25 +82,41 @@ class EventEmitter:
             "properties": dict(properties or {}),
         }
 
-        try:
-            # Redis Streams treats fields as a flat map; keep the whole
-            # envelope in a single `payload` field so consumers only parse
-            # JSON (no per-field type coercion).
-            await self._redis.xadd(
-                self._stream,
-                {"payload": json.dumps(envelope, separators=(",", ":"))},
-                maxlen=self._maxlen,
-                approximate=True,
-            )
-        except Exception as exc:  # pragma: no cover - best effort
-            events_published_total.labels(event_type, "error").inc()
-            log.warning(
-                "events.publish_failed",
-                err=str(exc),
-                event_type=event_type,
-            )
-            return
-        events_published_total.labels(event_type, "ok").inc()
+        payload = json.dumps(envelope, separators=(",", ":"))
+        # Redis xadd is normally fast; brief network blips should not lose
+        # an event silently. We retry up to 3 times with exponential backoff
+        # and jitter, then give up — analytics is best-effort and must not
+        # block the request path forever.
+        delay = 0.05
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                # Redis Streams treats fields as a flat map; keep the whole
+                # envelope in a single `payload` field so consumers only
+                # parse JSON (no per-field type coercion).
+                await self._redis.xadd(
+                    self._stream,
+                    {"payload": payload},
+                    maxlen=self._maxlen,
+                    approximate=True,
+                )
+                events_published_total.labels(event_type, "ok").inc()
+                return
+            except Exception as exc:  # pragma: no cover - best effort
+                last_exc = exc
+                if attempt == 2:
+                    break
+                # secrets.SystemRandom for jitter — we don't need cryptographic
+                # randomness but it avoids the global random() seed.
+                jitter = secrets.SystemRandom().uniform(0, delay)
+                await asyncio.sleep(delay + jitter)
+                delay *= 2
+        events_published_total.labels(event_type, "error").inc()
+        log.warning(
+            "events.publish_failed",
+            err=str(last_exc) if last_exc else "unknown",
+            event_type=event_type,
+        )
 
 
 _emitter: EventEmitter | None = None

@@ -31,7 +31,7 @@ describe('<RegisterForm />', () => {
     fireEvent.change(screen.getByLabelText(/имя/i), {
       target: { value: '  Алексей  ' },
     });
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/электронная почта/i), {
       target: { value: ' New@Example.com ' },
     });
     fireEvent.change(screen.getByLabelText(/пароль/i), {
@@ -50,7 +50,7 @@ describe('<RegisterForm />', () => {
   it('shows localized error when the email is already taken', async () => {
     registerApi.mockRejectedValue(new ApiError(409, 'email already registered'));
     render(<RegisterForm />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/электронная почта/i), {
       target: { value: 'dup@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/пароль/i), {
@@ -65,7 +65,7 @@ describe('<RegisterForm />', () => {
   it('sends empty display name as null', async () => {
     registerApi.mockResolvedValue({ access_token: 't' });
     render(<RegisterForm />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/электронная почта/i), {
       target: { value: 'a@b.com' },
     });
     fireEvent.change(screen.getByLabelText(/пароль/i), {

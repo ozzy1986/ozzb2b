@@ -30,6 +30,24 @@ class Settings(BaseSettings):
     request_timeout_s: float = Field(default=30.0)
     rate_limit_per_host_rps: float = Field(default=0.5, description="Max requests/sec per host.")
     concurrent_requests: int = Field(default=2, description="Parallel requests cap.")
+    max_response_bytes: int = Field(
+        default=2 * 1024 * 1024,
+        description=(
+            "Hard cap on a single response body. Streamed reads abort once "
+            "exceeded so a malicious or broken host cannot OOM the worker."
+        ),
+    )
+    max_redirects: int = Field(
+        default=5,
+        description="Maximum redirect hops per request before giving up.",
+    )
+    robots_strict: bool = Field(
+        default=False,
+        description=(
+            "When true, robots.txt fetch failures fail closed (no fetch). "
+            "Default is fail-open to keep crawling resilient."
+        ),
+    )
 
 
 @lru_cache(maxsize=1)

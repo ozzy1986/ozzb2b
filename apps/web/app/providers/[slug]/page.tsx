@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getProvider } from '@/lib/api';
 import type { ProviderDetail } from '@/lib/types';
 import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
+import { safeUrl } from '@/lib/safe-url';
 import { ContactProviderButton } from '@/components/ContactProviderButton';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { FreshnessBadge } from '@/components/FreshnessBadge';
@@ -137,32 +138,43 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
           <div className="sidebar-card">
             <h3>Контакты</h3>
             <dl>
-              {p.website ? (
-                <>
-                  <dt>Сайт</dt>
-                  <dd>
-                    <a href={p.website} target="_blank" rel="noreferrer">
-                      {p.website.replace(/^https?:\/\//, '')}
-                    </a>
-                  </dd>
-                </>
-              ) : null}
-              {p.email ? (
-                <>
-                  <dt>Email</dt>
-                  <dd>
-                    <a href={`mailto:${p.email}`}>{p.email}</a>
-                  </dd>
-                </>
-              ) : null}
-              {p.phone ? (
-                <>
-                  <dt>Телефон</dt>
-                  <dd>
-                    <a href={`tel:${p.phone.replace(/\s+/g, '')}`}>{p.phone}</a>
-                  </dd>
-                </>
-              ) : null}
+              {(() => {
+                const safeWebsite = safeUrl(p.website);
+                return safeWebsite ? (
+                  <>
+                    <dt>Сайт</dt>
+                    <dd>
+                      <a href={safeWebsite} target="_blank" rel="noreferrer">
+                        {safeWebsite.replace(/^https?:\/\//, '')}
+                      </a>
+                    </dd>
+                  </>
+                ) : null;
+              })()}
+              {(() => {
+                const safeEmail = p.email ? safeUrl(`mailto:${p.email}`) : null;
+                return safeEmail && p.email ? (
+                  <>
+                    <dt>Электронная почта</dt>
+                    <dd>
+                      <a href={safeEmail}>{p.email}</a>
+                    </dd>
+                  </>
+                ) : null;
+              })()}
+              {(() => {
+                const safePhone = p.phone
+                  ? safeUrl(`tel:${p.phone.replace(/\s+/g, '')}`)
+                  : null;
+                return safePhone && p.phone ? (
+                  <>
+                    <dt>Телефон</dt>
+                    <dd>
+                      <a href={safePhone}>{p.phone}</a>
+                    </dd>
+                  </>
+                ) : null;
+              })()}
               {p.address ? (
                 <>
                   <dt>Адрес</dt>

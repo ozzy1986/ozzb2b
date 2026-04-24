@@ -66,17 +66,15 @@ function toApiDetail(raw: unknown, fallback: string): string {
   return fallback;
 }
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiUrl()}${path}`, {
-    credentials: 'include',
-    ...init,
-    cache: 'no-store',
-    next: { revalidate: 0 },
-    headers: {
-      accept: 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
+function buildHeaders(init?: RequestInit): HeadersInit {
+  return {
+    accept: 'application/json',
+    ...(init?.headers ?? {}),
+  };
+}
+
+async function executeFetch<T>(path: string, init: RequestInit): Promise<T> {
+  const res = await fetch(`${apiUrl()}${path}`, init);
   if (!res.ok) {
     let detail = `${res.status}`;
     try {
@@ -90,9 +88,47 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+/**
+ * Authenticated / mutating call: never cached and always forwards the
+ * browser's cookie jar (or whatever `init.headers.cookie` the server page
+ * supplied via `authHeaders()`). Use this for `/auth/*`, `/me/*`, `/chat/*`,
+ * `/admin/*`, mutations on `/providers/*` and any per-user request.
+ */
+export async function fetchPrivate<T>(path: string, init?: RequestInit): Promise<T> {
+  return executeFetch<T>(path, {
+    credentials: 'include',
+    ...init,
+    cache: 'no-store',
+    next: { revalidate: 0 },
+    headers: buildHeaders(init),
+  });
+}
+
+type PublicInit = RequestInit & { revalidate?: number };
+
+/**
+ * Cacheable public catalog read. Defaults to a 60s `revalidate` window so
+ * Next.js can serve a fresh-enough copy without hitting the API on every
+ * request. Pass `{ revalidate: 0 }` to opt out for a specific call site.
+ */
+export async function fetchPublic<T>(path: string, init?: PublicInit): Promise<T> {
+  const { revalidate, ...rest } = init ?? {};
+  return executeFetch<T>(path, {
+    ...rest,
+    next: { revalidate: revalidate ?? 60 },
+    headers: buildHeaders(rest),
+  });
+}
+
+// Internal alias kept while we migrate older code paths. New code MUST pick
+// `fetchPrivate` or `fetchPublic` explicitly.
+const fetchJson = fetchPrivate;
+
 export async function getApiHealth(): Promise<ApiHealth> {
   try {
-    const body = await fetchJson<{ status: string; version: string }>('/health');
+    const body = await fetchPublic<{ status: string; version: string }>('/health', {
+      revalidate: 0,
+    });
     if (body.status !== 'ok') return { ok: false, error: body.status };
     return { ok: true, version: body.version };
   } catch (err) {
@@ -101,25 +137,25 @@ export async function getApiHealth(): Promise<ApiHealth> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  return fetchJson<Category[]>('/categories');
+  return fetchPublic<Category[]>('/categories', { revalidate: 300 });
 }
 
 export async function getCategoryTree(): Promise<CategoryTreeNode[]> {
-  return fetchJson<CategoryTreeNode[]>('/categories/tree');
+  return fetchPublic<CategoryTreeNode[]>('/categories/tree', { revalidate: 300 });
 }
 
 export async function getCountries(): Promise<Country[]> {
-  return fetchJson<Country[]>('/countries');
+  return fetchPublic<Country[]>('/countries', { revalidate: 600 });
 }
 
 export async function getCities(country?: string): Promise<City[]> {
   const qs = country ? `?country=${encodeURIComponent(country)}` : '';
-  return fetchJson<City[]>(`/cities${qs}`);
+  return fetchPublic<City[]>(`/cities${qs}`, { revalidate: 600 });
 }
 
 export async function getLegalForms(country?: string): Promise<LegalForm[]> {
   const qs = country ? `?country=${encodeURIComponent(country)}` : '';
-  return fetchJson<LegalForm[]>(`/legal-forms${qs}`);
+  return fetchPublic<LegalForm[]>(`/legal-forms${qs}`, { revalidate: 600 });
 }
 
 export type ProviderListParams = {
@@ -148,12 +184,13 @@ function buildQuery(params: ProviderListParams): string {
 }
 
 export async function listProviders(params: ProviderListParams = {}): Promise<ProviderListResponse> {
-  return fetchJson<ProviderListResponse>(`/providers${buildQuery(params)}`);
+  // Catalog listings are public reads; allow Next to serve a 60s-fresh copy.
+  return fetchPublic<ProviderListResponse>(`/providers${buildQuery(params)}`);
 }
 
 export async function getProvider(slug: string): Promise<ProviderDetail | null> {
   try {
-    return await fetchJson<ProviderDetail>(`/providers/${encodeURIComponent(slug)}`);
+    return await fetchPublic<ProviderDetail>(`/providers/${encodeURIComponent(slug)}`);
   } catch {
     return null;
   }
@@ -161,13 +198,14 @@ export async function getProvider(slug: string): Promise<ProviderDetail | null> 
 
 export async function searchProviders(params: ProviderListParams & { q: string }) {
   const qs = buildQuery(params);
-  return fetchJson<{
+  // Search is per-query and emits an analytics event server-side; do not cache.
+  return fetchPublic<{
     total: number;
     limit: number;
     offset: number;
     engine: string;
     items: import('./types').ProviderSummary[];
-  }>(`/search${qs}`);
+  }>(`/search${qs}`, { revalidate: 0 });
 }
 
 // ---- auth ----

@@ -86,8 +86,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let http_future =
         axum::serve(http_listener, http_app()).with_graceful_shutdown(shutdown_signal());
 
+    // Hard cap inbound/outbound message size at 1 MiB. The protobuf payload
+    // for a single Rank call is bounded by `MAX_CANDIDATES` * a few hundred
+    // bytes per candidate; anything larger is either a misconfigured client
+    // or a deliberate abuse attempt, and tonic's defaults (4 MiB / unbounded
+    // out) are looser than we need. Returning OutOfRange here is cheaper than
+    // letting the framework decode the body.
+    const MAX_GRPC_MESSAGE_BYTES: usize = 1024 * 1024;
+    let matcher_service = MatcherServiceServer::new(MatcherServer::default())
+        .max_decoding_message_size(MAX_GRPC_MESSAGE_BYTES)
+        .max_encoding_message_size(MAX_GRPC_MESSAGE_BYTES);
     let grpc_future = GrpcServer::builder()
-        .add_service(MatcherServiceServer::new(MatcherServer::default()))
+        .add_service(matcher_service)
         .serve_with_shutdown(grpc_addr, shutdown_signal());
 
     tokio::select! {

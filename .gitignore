@@ -12,16 +12,6 @@ infra/alertmanager/alertmanager.yml
 # ---- Legacy WordPress secrets ----
 wp-config.php
 
-# ---- Legacy WordPress runtime data ----
-legacy/wp-content/uploads/
-legacy/wp-content/cache/
-legacy/wp-content/upgrade/
-legacy/wp-content/backup*/
-legacy/wp-content/blogs.dir/
-legacy/wp-content/advanced-cache.php
-legacy/wp-content/wp-cache-config.php
-legacy/wp-content/object-cache.php
-
 # ---- Python ----
 __pycache__/
 *.py[cod]

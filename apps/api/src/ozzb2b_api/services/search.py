@@ -12,7 +12,9 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
+import anyio
 import structlog
 from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,20 +74,35 @@ class SearchGateway(ABC):
         ...
 
 
+def _escape_meili_value(value: str) -> str:
+    """Escape a single quoted-string value for Meilisearch's filter DSL.
+
+    Meilisearch parses filter strings like ``field = 'value'`` and the only
+    metacharacter inside the quoted segment is the single quote. Doubling it
+    is the documented escape, so a value of ``it's`` becomes ``'it''s'``.
+    Inputs containing CR/LF or NUL are rejected outright — they have no
+    legitimate place in a slug/code coming from our schemas and would only
+    show up as a malicious crafting attempt.
+    """
+    if any(ch in value for ch in ("\r", "\n", "\x00")):
+        raise ValueError(f"invalid filter value: {value!r}")
+    return value.replace("'", "''")
+
+
 def _meili_filter_expression(q: SearchQuery) -> list[str]:
     parts: list[str] = ["status = 'published'"]
+
+    def _ors(field: str, values: tuple[str, ...]) -> str:
+        return " OR ".join(f"{field} = '{_escape_meili_value(v)}'" for v in values)
+
     if q.category_slugs:
-        ors = " OR ".join(f"category_slugs = '{s}'" for s in q.category_slugs)
-        parts.append(f"({ors})")
+        parts.append(f"({_ors('category_slugs', q.category_slugs)})")
     if q.country_codes:
-        ors = " OR ".join(f"country_code = '{s}'" for s in q.country_codes)
-        parts.append(f"({ors})")
+        parts.append(f"({_ors('country_code', q.country_codes)})")
     if q.city_slugs:
-        ors = " OR ".join(f"city_slug = '{s}'" for s in q.city_slugs)
-        parts.append(f"({ors})")
+        parts.append(f"({_ors('city_slug', q.city_slugs)})")
     if q.legal_form_codes:
-        ors = " OR ".join(f"legal_form_code = '{s}'" for s in q.legal_form_codes)
-        parts.append(f"({ors})")
+        parts.append(f"({_ors('legal_form_code', q.legal_form_codes)})")
     return parts
 
 
@@ -94,15 +111,20 @@ class MeilisearchGateway(SearchGateway):
         client = get_meilisearch()
         index = client.index(PROVIDERS_INDEX)
         filter_exprs = _meili_filter_expression(q)
-        response = index.search(
-            q.q,
-            {
-                "limit": q.limit,
-                "offset": q.offset,
-                "filter": filter_exprs,
-                "attributesToRetrieve": ["id"],
-            },
-        )
+        params = {
+            "limit": q.limit,
+            "offset": q.offset,
+            "filter": filter_exprs,
+            "attributesToRetrieve": ["id"],
+        }
+
+        # The official Meilisearch SDK uses requests under the hood, which is
+        # synchronous. Calling it from an async route would block the event
+        # loop and tank concurrent throughput, so we hop to a worker thread.
+        def _call() -> dict[str, Any]:
+            return index.search(q.q, params)
+
+        response = await anyio.to_thread.run_sync(_call)
         hits_raw = response.get("hits", [])
         total = response.get("estimatedTotalHits", response.get("totalHits", len(hits_raw)))
         hits = [

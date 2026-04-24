@@ -22,6 +22,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/clickhouse"
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/config"
 	"github.com/ozzy1986/ozzb2b/apps/events/internal/pipeline"
@@ -82,6 +84,14 @@ func main() {
 			})
 			return
 		}
+		// Stream connectivity matters as much as ClickHouse — a Redis
+		// outage stalls the pipeline silently otherwise.
+		if err := pingRedis(cctx, cfg.RedisURL); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, healthResponse{
+				Status: "redis_unavailable", Service: "ozzb2b-events", Version: version,
+			})
+			return
+		}
 		writeJSON(w, http.StatusOK, healthResponse{
 			Status: "ok", Service: "ozzb2b-events", Version: version,
 		})
@@ -92,6 +102,7 @@ func main() {
 		Addr:              cfg.HTTPAddr,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {
@@ -171,4 +182,16 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+// pingRedis opens a short-lived client just for the readiness probe so we
+// don't have to thread the pipeline's go-redis client into the HTTP handler.
+func pingRedis(ctx context.Context, url string) error {
+	opts, err := redis.ParseURL(url)
+	if err != nil {
+		return err
+	}
+	c := redis.NewClient(opts)
+	defer c.Close()
+	return c.Ping(ctx).Err()
 }

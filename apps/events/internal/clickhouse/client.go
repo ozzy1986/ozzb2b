@@ -152,19 +152,36 @@ func (c *Client) execOn(ctx context.Context, db string, sql string) error {
 }
 
 // quoteIdent wraps an identifier with backticks and escapes embedded ones.
-// ClickHouse doesn't accept parameters in DDL so we quote manually and reject
-// anything that looks like SQL injection bait.
+// ClickHouse doesn't accept parameters in DDL so we quote manually. We also
+// hard-reject anything that doesn't match the safe identifier alphabet
+// `[A-Za-z_][A-Za-z0-9_]*`: the database name is supplied via env (operator
+// controlled), so a bad value is a config error rather than legitimate
+// input — failing loudly is correct.
 func quoteIdent(id string) string {
+	if !validIdent(id) {
+		panic(fmt.Sprintf("clickhouse: invalid identifier %q", id))
+	}
 	out := make([]byte, 0, len(id)+2)
 	out = append(out, '`')
-	for i := 0; i < len(id); i++ {
-		c := id[i]
-		if c == '`' {
-			out = append(out, '`', '`')
-			continue
-		}
-		out = append(out, c)
-	}
+	out = append(out, id...)
 	out = append(out, '`')
 	return string(out)
+}
+
+func validIdent(id string) bool {
+	if id == "" {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		switch {
+		case c >= 'a' && c <= 'z':
+		case c >= 'A' && c <= 'Z':
+		case c >= '0' && c <= '9' && i > 0:
+		case c == '_':
+		default:
+			return false
+		}
+	}
+	return true
 }

@@ -28,7 +28,7 @@ describe('<LoginForm />', () => {
   it('submits credentials and navigates on success', async () => {
     login.mockResolvedValue({ access_token: 't' });
     render(<LoginForm />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/электронная почта/i), {
       target: { value: 'User@Example.com ' },
     });
     fireEvent.change(screen.getByLabelText(/пароль/i), {
@@ -43,7 +43,7 @@ describe('<LoginForm />', () => {
   it('shows localized error on 401', async () => {
     login.mockRejectedValue(new ApiError(401, 'invalid email or password'));
     render(<LoginForm />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/электронная почта/i), {
       target: { value: 'x@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/пароль/i), {
@@ -51,14 +51,14 @@ describe('<LoginForm />', () => {
     });
     fireEvent.submit(screen.getByRole('button', { name: /войти/i }));
     const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toMatch(/неверный email или пароль/i);
+    expect(alert.textContent).toMatch(/неверный адрес электронной почты или пароль/i);
     expect(push).not.toHaveBeenCalled();
   });
 
   it('shows network-friendly error on offline', async () => {
     login.mockRejectedValue(new TypeError('Failed to fetch'));
     render(<LoginForm />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/электронная почта/i), {
       target: { value: 'x@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/пароль/i), {

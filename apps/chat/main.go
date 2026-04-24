@@ -41,6 +41,12 @@ func main() {
 		logger.Error("chat.verifier_error", "err", err)
 		os.Exit(1)
 	}
+	if cfg.JWTAudience != "" {
+		verifier = verifier.WithAudience(cfg.JWTAudience)
+	}
+	if cfg.JWTIssuer != "" {
+		verifier = verifier.WithIssuer(cfg.JWTIssuer)
+	}
 
 	rf, err := pubsub.NewRedisFactory(cfg.RedisURL)
 	if err != nil {

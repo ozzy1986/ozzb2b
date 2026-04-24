@@ -7,13 +7,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ozzb2b_api.config import get_settings
 from ozzb2b_api.db.models import Provider, User
-from ozzb2b_api.routes.catalog import to_provider_detail
 from ozzb2b_api.routes.deps import DbSession, get_current_user
 from ozzb2b_api.schemas.catalog import ProviderDetail
 from ozzb2b_api.schemas.claims import (
@@ -21,14 +19,12 @@ from ozzb2b_api.schemas.claims import (
     ClaimPublic,
     ProviderUpdateRequest,
 )
+from ozzb2b_api.security.rate_limit import enforce_rate_limit
+from ozzb2b_api.security.safe_http import SafeHttpPolicy, UnsafeUrlError, fetch_text
 from ozzb2b_api.services import catalog as catalog_service
 from ozzb2b_api.services import claims as claims_service
-from ozzb2b_api.services.claims import (
-    HomepageUnreachableError,
-    MetaTagNotFoundError,
-    NoVerifiableWebsiteError,
-    ProviderAlreadyClaimedError,
-)
+from ozzb2b_api.services.claims import HomepageUnreachableError
+from ozzb2b_api.services.provider_mapping import to_detail as to_provider_detail
 
 router = APIRouter(tags=["claims"])
 
@@ -36,20 +32,22 @@ router = APIRouter(tags=["claims"])
 async def _fetch_homepage(url: str) -> str:
     """Default fetcher used during verification.
 
-    Separate function to keep `verify_claim` easy to unit test without network.
+    Routes through :func:`ozzb2b_api.security.safe_http.fetch_text` so the
+    request is hardened against SSRF (scheme/host/IP allowlist, bounded
+    redirects, bounded body and time). Failures are normalised into
+    :class:`HomepageUnreachableError` so callers don't have to know about
+    the safe-http layer.
     """
     cfg = get_settings()
-    async with httpx.AsyncClient(
-        timeout=10.0,
-        follow_redirects=True,
-        headers={
-            "User-Agent": f"ozzb2b-claim-verifier/{cfg.env}",
-            "Accept": "text/html,application/xhtml+xml",
-        },
-    ) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        return resp.text
+    policy = SafeHttpPolicy(allow_http=not cfg.is_production)
+    try:
+        return await fetch_text(
+            url,
+            policy=policy,
+            user_agent=f"ozzb2b-claim-verifier/{cfg.env}",
+        )
+    except UnsafeUrlError as exc:
+        raise HomepageUnreachableError(str(exc)) from exc
 
 
 async def _load_provider_or_404(db: AsyncSession, slug: str) -> Provider:
@@ -66,19 +64,28 @@ async def _load_provider_or_404(db: AsyncSession, slug: str) -> Provider:
 )
 async def initiate_claim(
     slug: str,
+    request: Request,
+    response: Response,
     db: DbSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> ClaimInitiateResponse:
+    cfg = get_settings()
+    await enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="claim_init",
+        limit=cfg.rate_limit_claim_init_max,
+        user_scope=str(user.id),
+    )
     provider = await _load_provider_or_404(db, slug)
     if not provider.website:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "provider has no website, verification impossible",
         )
-    try:
-        result = await claims_service.initiate_claim(db, provider=provider, user=user)
-    except ProviderAlreadyClaimedError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    # Domain errors raised below are translated to HTTP responses by the
+    # global DomainError handler in `ozzb2b_api.app`.
+    result = await claims_service.initiate_claim(db, provider=provider, user=user)
     return ClaimInitiateResponse(
         claim_id=result.claim.id,
         status=result.claim.status.value,
@@ -97,27 +104,31 @@ async def initiate_claim(
 )
 async def verify_claim(
     slug: str,
+    request: Request,
+    response: Response,
     db: DbSession,
     user: Annotated[User, Depends(get_current_user)],
 ) -> ClaimPublic:
+    cfg = get_settings()
+    # Verification triggers an outbound HTTP fetch of the provider's homepage,
+    # which is the most expensive (and SSRF-sensitive) action a user can
+    # trigger. Rate-limit per user so repeated abuse is throttled.
+    await enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="claim_verify",
+        limit=cfg.rate_limit_claim_verify_max,
+        user_scope=str(user.id),
+    )
     provider = await _load_provider_or_404(db, slug)
-    try:
-        claim = await claims_service.verify_claim(
-            db,
-            provider=provider,
-            user=user,
-            homepage_fetcher=_fetch_homepage,
-        )
-    except ProviderAlreadyClaimedError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
-    except NoVerifiableWebsiteError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    except HomepageUnreachableError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
-    except MetaTagNotFoundError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    except claims_service.ClaimError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    # All claim-domain errors have their own HTTP status_code and are mapped
+    # by the global DomainError handler in `ozzb2b_api.app`.
+    claim = await claims_service.verify_claim(
+        db,
+        provider=provider,
+        user=user,
+        homepage_fetcher=_fetch_homepage,
+    )
     return ClaimPublic.model_validate(claim)
 
 
@@ -147,15 +158,13 @@ async def update_provider(
     user: Annotated[User, Depends(get_current_user)],
 ) -> ProviderDetail:
     provider = await _load_provider_or_404(db, slug)
-    if not claims_service.user_may_edit_provider(user, provider):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "not an owner of this provider")
-    data = payload.model_dump(exclude_unset=True)
-    # Normalize empty strings to nulls so the UI can clear fields explicitly.
-    for field, value in data.items():
-        if isinstance(value, str) and not value.strip():
-            setattr(provider, field, None)
-        else:
-            setattr(provider, field, value)
-    await db.commit()
-    await db.refresh(provider)
-    return to_provider_detail(provider)
+    try:
+        updated = await claims_service.update_owned_provider(
+            db,
+            provider=provider,
+            user=user,
+            fields=payload.model_dump(exclude_unset=True),
+        )
+    except PermissionError as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
+    return to_provider_detail(updated)

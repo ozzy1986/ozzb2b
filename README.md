@@ -248,15 +248,20 @@ configured in `.pre-commit-config.yaml`; enable with
 All work in `apps/` is guarded by a matching CI job in
 `.github/workflows/ci.yml` that must be green before merging:
 
-- **apps/api** — `pytest` + `pytest-cov` with a 60% threshold, strict
+- **apps/api** — `pytest` + `pytest-cov` with a 70% threshold, strict
   `mypy --strict`, `ruff check`. Includes an OpenAPI snapshot test to detect
   public surface drift (`apps/api/tests/snapshots/openapi_routes.json`).
 - **apps/scraper** — `pytest` with a 70% threshold, `ruff check`, per-spider
   HTML fixtures.
-- **apps/web** — `vitest` with v8 coverage provider (floor: 20% lines /
-  55% branches), `tsc --noEmit`, React component tests via `@testing-library/react`.
-- **apps/chat, apps/events** — `go vet` + `go test -race -coverprofile`
-  with a 55% coverage floor enforced by `scripts/check_go_coverage.sh`.
+- **apps/web** — `vitest` for `lib/*` and component tests, `tsc --noEmit`,
+  React component tests via `@testing-library/react`. Coverage is reported
+  but not gated yet at the package level; the diff-cover gate below covers
+  changed lines.
+- **apps/chat** — `go vet` + `go test -race -coverprofile` with a 55%
+  coverage floor enforced by `scripts/check_go_coverage.sh`.
+- **apps/events** — `go vet` + `go test -race -coverprofile` with a 20%
+  coverage floor (consumer is mostly wiring; floor will rise as the
+  pipeline gains tests).
 - **apps/matcher** — `cargo fmt --check`, `cargo clippy -- -D warnings`,
   `cargo test --all-targets`.
 
@@ -271,7 +276,7 @@ Extra CI gates:
   Chrome against an intentionally unreachable API — we verify that page
   shells, routing, and HTML5 validation never regress.
 - **coverage diff (changed lines)** — on pull requests, `diff-cover` enforces
-  ≥85% coverage on changed Python lines; web diff-coverage is tracked
+  ≥90% coverage on changed Python lines; web diff-coverage is tracked
   informationally until the vitest suite grows.
 - **secret scan (gitleaks)** — hard gate. Any leaked credential fails the
   build; zero tolerance.
