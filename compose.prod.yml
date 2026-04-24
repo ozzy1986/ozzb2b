@@ -11,6 +11,8 @@ services:
     image: getmeili/meilisearch:v1.11
     container_name: ozzb2b-meilisearch
     restart: unless-stopped
+    mem_limit: 256m
+    mem_reservation: 64m
     env_file:
       - .env.prod
     environment:
@@ -49,6 +51,8 @@ services:
       interval: 15s
       timeout: 3s
       retries: 6
+    mem_limit: 384m
+    mem_reservation: 128m
 
   web:
     image: ozzb2b-web:local
@@ -71,6 +75,8 @@ services:
       interval: 15s
       timeout: 5s
       retries: 6
+    mem_limit: 512m
+    mem_reservation: 128m
 
   scraper:
     image: ozzb2b-scraper:local
@@ -97,6 +103,8 @@ services:
       ]
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    mem_limit: 256m
+    mem_reservation: 64m
 
   chat:
     image: ozzb2b-chat:local
@@ -119,6 +127,8 @@ services:
       interval: 15s
       timeout: 3s
       retries: 6
+    mem_limit: 64m
+    mem_reservation: 32m
 
   matcher:
     image: ozzb2b-matcher:local
@@ -137,6 +147,8 @@ services:
       interval: 15s
       timeout: 3s
       retries: 6
+    mem_limit: 64m
+    mem_reservation: 32m
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.11
@@ -157,8 +169,9 @@ services:
     volumes:
       - /var/www/ozzb2b.com/data/clickhouse:/var/lib/clickhouse
       - ./infra/clickhouse/disable_system_logs.xml:/etc/clickhouse-server/config.d/disable_system_logs.xml:ro
-    mem_limit: 1g
-    mem_reservation: 384m
+      - ./infra/clickhouse/low_memory_prod.xml:/etc/clickhouse-server/config.d/low_memory_prod.xml:ro
+    mem_limit: 512m
+    mem_reservation: 256m
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping >/dev/null || exit 1"]
       interval: 15s
@@ -191,6 +204,8 @@ services:
       interval: 15s
       timeout: 3s
       retries: 6
+    mem_limit: 64m
+    mem_reservation: 32m
 
   # ------------------ Phase 5.5: observability stack ------------------
   # Prometheus scrapes the /metrics endpoints each service already exposes.

@@ -1,0 +1,4 @@
+<clickhouse>
+    <!-- Keep ClickHouse inside Docker mem_limit on a small shared VPS (~512m). -->
+    <max_server_memory_usage>400000000</max_server_memory_usage>
+</clickhouse>
