@@ -8,9 +8,20 @@ log() { printf "[vps_apply_stack] %s\n" "$*"; }
 cd "$APP"
 
 export GIT_SSH_COMMAND="ssh -i /root/.ssh/ozzb2b_deploy -o IdentitiesOnly=yes"
-log "git pull $(git rev-parse --short HEAD 2>/dev/null || echo '?') ..."
+# GitHub default branch on this repo is `master` (renamed from `main`);
+# keep this in sync with `deploy/vps_bootstrap.sh` and `remote_git_clone.sh`.
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-master}"
+log "git pull $(git rev-parse --short HEAD 2>/dev/null || echo '?') -> $DEPLOY_BRANCH ..."
 git fetch origin
-git pull --ff-only origin main
+# Make sure HEAD is on the deploy branch. If the checkout is still on an
+# older local branch (e.g. `main` from before the rename), move it across
+# once and track `origin/$DEPLOY_BRANCH` from here on.
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$current_branch" != "$DEPLOY_BRANCH" ]; then
+    log "switching working copy from $current_branch to $DEPLOY_BRANCH"
+    git checkout -B "$DEPLOY_BRANCH" "origin/$DEPLOY_BRANCH"
+fi
+git pull --ff-only origin "$DEPLOY_BRANCH"
 
 log "refresh .env.prod"
 set -a

@@ -15,7 +15,7 @@ set -euo pipefail
 APP_DIR="/var/www/ozzb2b.com/app"
 SITE_DIR="/var/www/ozzb2b.com"
 REPO_URL="${REPO_URL:-https://github.com/ozzy1986/ozzb2b.git}"
-REPO_BRANCH="${REPO_BRANCH:-main}"
+REPO_BRANCH="${REPO_BRANCH:-master}"
 
 log() { printf "[vps_bootstrap] %s\n" "$*"; }
 
