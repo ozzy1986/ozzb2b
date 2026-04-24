@@ -41,11 +41,17 @@ class PoliteFetcher:
         self._min_interval = 1.0 / max(cfg.rate_limit_per_host_rps, 0.01)
         self._last_call: dict[str, float] = defaultdict(lambda: 0.0)
         self._lock = asyncio.Lock()
+        # Hard cap on in-flight requests across hosts: prevents a spider that
+        # iterates fast from opening more sockets than `concurrent_requests`,
+        # regardless of per-host throttling.
+        self._inflight = asyncio.Semaphore(max(1, cfg.concurrent_requests))
+        self._max_bytes = max(1024, cfg.max_response_bytes)
         self._user_agent = cfg.user_agent
         self._client = httpx.AsyncClient(
             timeout=cfg.request_timeout_s,
             headers={"User-Agent": cfg.user_agent, "Accept": "text/html,application/xhtml+xml"},
             follow_redirects=True,
+            max_redirects=max(0, cfg.max_redirects),
         )
         self._robots = RobotsCache(self._client, cfg.user_agent)
 
@@ -67,18 +73,49 @@ class PoliteFetcher:
             raise RobotsDisallowed(url)
         host = httpx.URL(url).host
         await self._throttle(host)
-        async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(3),
-            wait=wait_exponential(multiplier=1, min=1, max=8),
-            retry=retry_if_exception_type((httpx.TransportError, httpx.ReadTimeout)),
-            reraise=True,
-        ):
-            with attempt:
-                resp = await self._client.get(url)
-                resp.raise_for_status()
-                log.debug("http.get.ok", url=url, status=resp.status_code)
-                return resp
+        async with self._inflight:
+            async for attempt in AsyncRetrying(
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=1, min=1, max=8),
+                retry=retry_if_exception_type((httpx.TransportError, httpx.ReadTimeout)),
+                reraise=True,
+            ):
+                with attempt:
+                    return await self._stream_capped(url)
         raise RuntimeError("unreachable")
+
+    async def _stream_capped(self, url: str) -> httpx.Response:
+        """Streamed GET that aborts once `max_response_bytes` is exceeded.
+
+        We rebuild a synthetic ``httpx.Response`` so callers (spiders) can
+        keep treating the result as a normal response object.
+        """
+        async with self._client.stream("GET", url) as resp:
+            resp.raise_for_status()
+            chunks: list[bytes] = []
+            received = 0
+            async for chunk in resp.aiter_bytes(chunk_size=16 * 1024):
+                received += len(chunk)
+                if received > self._max_bytes:
+                    log.warning(
+                        "http.get.body_too_large",
+                        url=url,
+                        cap=self._max_bytes,
+                    )
+                    raise ResponseTooLarge(url)
+                chunks.append(chunk)
+            full = httpx.Response(
+                status_code=resp.status_code,
+                headers=resp.headers,
+                content=b"".join(chunks),
+                request=resp.request,
+            )
+            log.debug("http.get.ok", url=url, status=resp.status_code, bytes=received)
+            return full
+
+
+class ResponseTooLarge(RuntimeError):
+    """Raised when a response body exceeds `max_response_bytes`."""
 
 
 _CHALLENGE_MARKERS: tuple[str, ...] = (

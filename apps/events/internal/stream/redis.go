@@ -80,9 +80,15 @@ func Connect(ctx context.Context, cfg Config) (*Reader, *redis.Client, error) {
 
 // Read polls the stream for new entries for up to `block`, returning up to
 // `count` decoded messages. If a claim window has elapsed we first harvest
-// pending entries from dead consumers.
+// pending entries from dead consumers and feed them straight into the
+// pipeline (rather than relying on a follow-up `>` read, which only
+// delivers brand-new entries and would leave the claimed batch stuck in
+// our PEL forever).
 func (r *Reader) Read(ctx context.Context, count int, block time.Duration) ([]pipeline.StreamMessage, error) {
-	r.maybeClaim(ctx)
+	claimed := r.maybeClaim(ctx, count)
+	if len(claimed) > 0 {
+		return claimed, nil
+	}
 
 	entries, err := r.rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
 		Group:    r.group,
@@ -109,27 +115,48 @@ func (r *Reader) Ack(ctx context.Context, ids []string) error {
 	return r.rdb.XAck(ctx, r.stream, r.group, ids...).Err()
 }
 
-func (r *Reader) maybeClaim(ctx context.Context) {
+// maybeClaim runs XAUTOCLAIM and returns the claimed messages so the caller
+// can process and ACK them in the same cycle. We cap the harvest at `count`
+// so a single backlog burst doesn't starve the regular read path.
+func (r *Reader) maybeClaim(ctx context.Context, count int) []pipeline.StreamMessage {
 	if r.claimIdle <= 0 {
-		return
+		return nil
 	}
 	now := time.Now()
 	if !r.lastClaim.IsZero() && now.Sub(r.lastClaim) < r.claimEvery {
-		return
+		return nil
 	}
 	r.lastClaim = now
 
-	_, _, err := r.rdb.XAutoClaim(ctx, &redis.XAutoClaimArgs{
+	if count <= 0 {
+		count = 256
+	}
+
+	msgs, _, err := r.rdb.XAutoClaim(ctx, &redis.XAutoClaimArgs{
 		Stream:   r.stream,
 		Group:    r.group,
 		Consumer: r.consumer,
 		MinIdle:  r.claimIdle,
 		Start:    "0-0",
-		Count:    256,
+		Count:    int64(count),
 	}).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
 		r.logger.Warn("events.autoclaim_failed", "err", err)
+		return nil
 	}
+	if len(msgs) == 0 {
+		return nil
+	}
+	out := make([]pipeline.StreamMessage, 0, len(msgs))
+	for _, m := range msgs {
+		payload, _ := m.Values["payload"].(string)
+		out = append(out, pipeline.StreamMessage{
+			ID:      m.ID,
+			Payload: []byte(payload),
+		})
+	}
+	r.logger.Info("events.autoclaim_picked_up", "count", len(out))
+	return out
 }
 
 func decode(streams []redis.XStream) []pipeline.StreamMessage {

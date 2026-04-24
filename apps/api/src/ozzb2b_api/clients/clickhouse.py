@@ -8,6 +8,9 @@ the endpoints must return a friendly degraded response.
 
 from __future__ import annotations
 
+import asyncio
+import json
+import secrets
 from dataclasses import dataclass
 from typing import Any
 
@@ -64,17 +67,34 @@ async def query_json(
     for k, v in (params or {}).items():
         qparams[f"param_{k}"] = str(v)
 
-    try:
-        async with httpx.AsyncClient(timeout=cfg.timeout_s) as client:
-            resp = await client.post(
-                cfg.url,
-                params=qparams,
-                content=sql + "\nFORMAT JSONEachRow",
-                headers={"Content-Type": "text/plain; charset=utf-8"},
-                auth=(cfg.user, cfg.password),
-            )
-    except (httpx.ConnectError, httpx.ReadTimeout, httpx.WriteTimeout) as exc:
-        raise ClickHouseUnavailableError(str(exc)) from exc
+    # Retry transient transport-level failures with capped exponential
+    # backoff + jitter (3 attempts: ~100ms, ~200ms, give up). HTTP 5xx
+    # responses are not retried here because ClickHouse can return 500 for
+    # legitimate query errors — surfacing them is the right behaviour.
+    delay = 0.1
+    last_exc: Exception | None = None
+    resp: httpx.Response | None = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=cfg.timeout_s) as client:
+                resp = await client.post(
+                    cfg.url,
+                    params=qparams,
+                    content=sql + "\nFORMAT JSONEachRow",
+                    headers={"Content-Type": "text/plain; charset=utf-8"},
+                    auth=(cfg.user, cfg.password),
+                )
+            break
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.WriteTimeout) as exc:
+            last_exc = exc
+            if attempt == 2:
+                raise ClickHouseUnavailableError(str(exc)) from exc
+            jitter = secrets.SystemRandom().uniform(0, delay)
+            await asyncio.sleep(delay + jitter)
+            delay *= 2
+
+    if resp is None:
+        raise ClickHouseUnavailableError(str(last_exc) if last_exc else "unknown")
 
     if resp.status_code >= 400:
         raise ClickHouseError(
@@ -86,8 +106,6 @@ async def query_json(
         line = line.strip()
         if not line:
             continue
-        import json
-
         try:
             rows.append(json.loads(line))
         except json.JSONDecodeError:

@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import os
 
+import httpx
 from celery import Celery
 from celery.schedules import crontab
 
+from ozzb2b_scraper.http import ResponseTooLarge
 from ozzb2b_scraper.pipeline import run_spider_sync
 from ozzb2b_scraper.spiders import (
     ALL_SPIDERS,
@@ -19,6 +21,19 @@ from ozzb2b_scraper.spiders import (
     RuOutsourcingSeedSpider,
     RuRegionalItSeedSpider,
 )
+
+# Transient errors worth retrying at the Celery layer. Permanent / structural
+# failures (bad spider config, DB constraint violation) still propagate so
+# they show up in monitoring instead of looping forever.
+_TRANSIENT_ERRORS = (
+    httpx.TransportError,
+    httpx.ReadTimeout,
+    httpx.WriteTimeout,
+    httpx.RemoteProtocolError,
+    ConnectionError,
+    TimeoutError,
+)
+_NON_RETRYABLE_ERRORS = (ResponseTooLarge,)
 
 REDIS_URL = os.environ.get("OZZB2B_REDIS_URL", "redis://localhost:6380/0")
 
@@ -65,7 +80,16 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "ozzb2b-scraper"}
 
 
-@app.task(name="ozzb2b.scraper.crawl_source", bind=True, default_retry_delay=60, max_retries=3)
+@app.task(
+    name="ozzb2b.scraper.crawl_source",
+    bind=True,
+    autoretry_for=_TRANSIENT_ERRORS,
+    dont_autoretry_for=_NON_RETRYABLE_ERRORS,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    max_retries=3,
+)
 def crawl_source(self, source_slug: str, limit: int | None = None) -> dict[str, int | str]:
     """Run a registered spider by its source slug."""
     cls = _SPIDER_MAP.get(source_slug)
@@ -83,8 +107,17 @@ def crawl_source(self, source_slug: str, limit: int | None = None) -> dict[str, 
     }
 
 
-@app.task(name="ozzb2b.scraper.crawl_all")
-def crawl_all(limit: int | None = None) -> dict[str, object]:
+@app.task(
+    name="ozzb2b.scraper.crawl_all",
+    bind=True,
+    autoretry_for=_TRANSIENT_ERRORS,
+    dont_autoretry_for=_NON_RETRYABLE_ERRORS,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    max_retries=3,
+)
+def crawl_all(self, limit: int | None = None) -> dict[str, object]:
     """Run every registered real-source spider once. Skips the demo spider."""
     results: dict[str, object] = {"status": "ok", "sources": []}
     for cls in ALL_SPIDERS:

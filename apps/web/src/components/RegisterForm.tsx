@@ -5,12 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { register } from '@/lib/api';
 import { humanizeError } from '@/lib/errors';
+import { safeNextPath } from '@/lib/safe-next';
 import { ErrorAlert } from './ErrorAlert';
 
 export function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get('next') ?? '/';
+  // Sanitize `?next=` so it can never trigger an open redirect to a foreign
+  // origin (e.g. `?next=//evil.example` or `?next=https://evil.example`).
+  const next = safeNextPath(params.get('next')) ?? '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -50,7 +53,7 @@ export function RegisterForm() {
         />
       </label>
       <label>
-        Email
+        Электронная почта
         <input
           type="email"
           name="email"

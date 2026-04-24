@@ -32,7 +32,6 @@ func newTestServer(t *testing.T, ps pubsub.Factory) (*httptest.Server, *Handler)
 			HTTPAddr:         ":0",
 			AllowedOrigins:   []string{"*"},
 			PingInterval:     100 * time.Millisecond,
-			PongWait:         time.Second,
 			WriteTimeout:     time.Second,
 			MaxClientMessage: 1024,
 			Version:          "test",

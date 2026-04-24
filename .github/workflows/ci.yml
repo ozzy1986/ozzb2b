@@ -376,10 +376,13 @@ jobs:
           path: coverage-artifacts/web
         continue-on-error: true
       - name: Diff coverage (api)
+        # Hard gate: every changed Python line in apps/api must be covered
+        # at >=90%. The catch-all coverage floor lives in pyproject.toml; this
+        # job stops slow drift by holding new code to a higher bar.
         run: |
           diff-cover coverage-artifacts/api/coverage.xml \
             --compare-branch=origin/${{ github.base_ref }} \
-            --fail-under=85
+            --fail-under=90
       - name: Diff coverage (web, informational)
         # LCOV report is emitted by vitest's v8 coverage and only when the
         # test:coverage step itself succeeds; keep this informational until
@@ -484,8 +487,21 @@ jobs:
           context: ${{ matrix.service == 'matcher' && '.' || format('apps/{0}', matrix.service) }}
           file: ${{ matrix.service == 'matcher' && 'apps/matcher/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
           push: false
-          load: false
+          # `load: true` makes the image available to the local docker daemon
+          # so the trivy-image scan job can pick it up without re-building.
+          load: true
           tags: ozzb2b-${{ matrix.service }}:ci
+      - name: Trivy image scan
+        # Hard gate on the runtime image (OS + bundled deps), not just the
+        # source tree. `trivy fs` already covers source CVEs; this job catches
+        # base-image rot that source scans can't see.
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ozzb2b-${{ matrix.service }}:ci
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          vuln-type: os,library
 
   # ---------------- Security scans ----------------
 
@@ -585,7 +601,7 @@ jobs:
           scan-ref: .
           ignore-unfixed: true
           severity: HIGH,CRITICAL
-          skip-dirs: legacy,node_modules,target,.venv,apps/web/.next
+          skip-dirs: node_modules,target,.venv,apps/web/.next
           exit-code: "1"
 
   secret-scan:
@@ -601,11 +617,50 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  pre-commit:
+    name: pre-commit
+    # Runs the same hooks contributors get locally so the repo never lands a
+    # PR that violates the configured ruff / yaml / large-file / private-key
+    # / gitleaks rules.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pre-commit
+        run: pip install "pre-commit>=4,<5"
+      - name: Run pre-commit on all files
+        run: pre-commit run --all-files --show-diff-on-failure
+
+  web-ru-only:
+    name: web ru-only (static)
+    # User-facing UI must be Russian. This grep-based gate catches the most
+    # common drift (English literals leaking into JSX) without trying to be
+    # a full-blown i18n linter — see scripts/check_web_ru_only.sh for the
+    # allowlist of approved technical tokens (URLs, brand names, etc.).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run RU-only check
+        run: |
+          chmod +x scripts/check_web_ru_only.sh
+          ./scripts/check_web_ru_only.sh
+
   # ---------------- Final gate ----------------
 
   ci-ok:
     name: ci ok
-    # Hard gate: all core tests/builds plus contract and security checks.
+    # Hard gate: every core test/build plus contract, security and (on PRs)
+    # coverage-diff must pass. `coverage-diff` only runs on pull_request, so
+    # we use `if: always()` + an explicit results check that treats a
+    # deliberately skipped job as success and any failure/cancellation as a
+    # hard fail. Without this pattern, adding a conditional dependency to
+    # `needs` would skip `ci-ok` on pushes to master and turn the gate off.
+    if: ${{ always() }}
     needs:
       - api
       - web
@@ -623,6 +678,21 @@ jobs:
       - security-go
       - security-rust
       - security-fs
+      - coverage-diff
+      - pre-commit
+      - web-ru-only
     runs-on: ubuntu-24.04
     steps:
-      - run: echo "all required jobs passed"
+      - name: Validate required job results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -eu
+          echo "$RESULTS"
+          failed=$(printf '%s' "$RESULTS" \
+            | python3 -c "import json,sys; data=json.load(sys.stdin); print('\n'.join(k for k,v in data.items() if v.get('result') in ('failure','cancelled')))")
+          if [ -n "$failed" ]; then
+            echo "::error::required jobs failed or were cancelled: $failed"
+            exit 1
+          fi
+          echo "all required jobs passed (or were intentionally skipped)"

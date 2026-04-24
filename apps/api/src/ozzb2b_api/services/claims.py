@@ -34,6 +34,7 @@ from ozzb2b_api.db.models import (
     User,
     UserRole,
 )
+from ozzb2b_api.errors import ConflictError, DomainError, ExternalServiceError
 
 log = structlog.get_logger("ozzb2b_api.services.claims")
 
@@ -51,19 +52,19 @@ _META_TAG_RE = re.compile(
 )
 
 
-class ClaimError(RuntimeError):
+class ClaimError(DomainError):
     """Base class for domain errors raised by the claim service."""
 
 
-class ProviderAlreadyClaimedError(ClaimError):
+class ProviderAlreadyClaimedError(ConflictError):
     """Provider already has a verified owner."""
 
 
 class NoVerifiableWebsiteError(ClaimError):
-    """Provider has no website to verify against."""
+    """Provider has no website to verify against (HTTP 400)."""
 
 
-class HomepageUnreachableError(ClaimError):
+class HomepageUnreachableError(ExternalServiceError):
     """Couldn't fetch the provider homepage."""
 
 
@@ -299,3 +300,31 @@ def user_may_edit_provider(user: User, provider: Provider) -> bool:
     if user.role == UserRole.ADMIN:
         return True
     return bool(provider.is_claimed) and provider.claimed_by_user_id == user.id
+
+
+async def update_owned_provider(
+    db: AsyncSession,
+    *,
+    provider: Provider,
+    user: User,
+    fields: dict[str, object],
+) -> Provider:
+    """Apply an owner edit to ``provider``.
+
+    Empty/whitespace string values are normalised to ``None`` so the UI can
+    clear fields explicitly. Authorisation is checked via
+    :func:`user_may_edit_provider`; callers should map the raised
+    :class:`PermissionError` to a 403.
+    """
+    if not user_may_edit_provider(user, provider):
+        raise PermissionError("not an owner of this provider")
+
+    for field, value in fields.items():
+        if isinstance(value, str) and not value.strip():
+            setattr(provider, field, None)
+        else:
+            setattr(provider, field, value)
+
+    await db.commit()
+    await db.refresh(provider)
+    return provider

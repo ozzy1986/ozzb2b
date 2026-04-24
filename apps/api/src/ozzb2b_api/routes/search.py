@@ -5,20 +5,16 @@ from __future__ import annotations
 import time
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel
 
 from ozzb2b_api.clients.events import EVENT_SEARCH_PERFORMED, get_event_emitter
-from ozzb2b_api.db.models import Provider
+from ozzb2b_api.config import get_settings
 from ozzb2b_api.routes.deps import DbSession
-from ozzb2b_api.schemas.catalog import (
-    CategoryPublic,
-    CityPublic,
-    CountryPublic,
-    LegalFormPublic,
-    ProviderSummary,
-)
+from ozzb2b_api.schemas.catalog import ProviderSummary
+from ozzb2b_api.security.rate_limit import enforce_rate_limit
 from ozzb2b_api.services import search as search_service
+from ozzb2b_api.services.provider_mapping import to_summary
 
 router = APIRouter(tags=["search"])
 
@@ -31,27 +27,11 @@ class SearchResponse(BaseModel):
     items: list[ProviderSummary]
 
 
-def _to_summary(provider: Provider) -> ProviderSummary:
-    return ProviderSummary(
-        id=provider.id,
-        slug=provider.slug,
-        display_name=provider.display_name,
-        description=provider.description,
-        country=CountryPublic.model_validate(provider.country) if provider.country else None,
-        city=CityPublic.model_validate(provider.city) if provider.city else None,
-        legal_form=LegalFormPublic.model_validate(provider.legal_form)
-        if provider.legal_form
-        else None,
-        year_founded=provider.year_founded,
-        employee_count_range=provider.employee_count_range,
-        logo_url=provider.logo_url,
-        categories=[CategoryPublic.model_validate(c) for c in provider.categories],
-    )
-
-
 @router.get("/search", response_model=SearchResponse)
 async def search_endpoint(
     db: DbSession,
+    request: Request,
+    response: Response,
     q: Annotated[str, Query(min_length=1, max_length=200)],
     categories: Annotated[list[str] | None, Query(alias="category")] = None,
     countries: Annotated[list[str] | None, Query(alias="country")] = None,
@@ -60,6 +40,15 @@ async def search_endpoint(
     limit: Annotated[int, Query(ge=1, le=100)] = 24,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> SearchResponse:
+    # Public endpoint, so we throttle by IP only — anonymous users have no
+    # identity beyond their socket peer (or trusted XFF hop, see config).
+    cfg = get_settings()
+    await enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="search",
+        limit=cfg.rate_limit_search_max,
+    )
     query = search_service.SearchQuery(
         q=q,
         category_slugs=tuple(categories or ()),
@@ -104,5 +93,5 @@ async def search_endpoint(
         limit=limit,
         offset=offset,
         engine=result.engine,
-        items=[_to_summary(p) for p in ordered_providers],
+        items=[to_summary(p) for p in ordered_providers],
     )

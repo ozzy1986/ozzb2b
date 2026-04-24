@@ -53,6 +53,53 @@ def _now() -> datetime:
     return datetime.now(tz=UTC)
 
 
+def _decode_with_audience(
+    token: str,
+    *,
+    cfg: Settings,
+    audience: str,
+) -> dict[str, object]:
+    """Verify `iss`, `aud`, `exp` (with leeway) and return the raw claims dict.
+
+    Tokens minted by an older release without `iss`/`aud` are accepted as a
+    one-time backwards-compatibility shim so a deploy doesn't sign every
+    in-flight session out — once those tokens expire (≤15 min for access,
+    ≤2 min for ws_chat) the shim is dead code and can be removed.
+    """
+    try:
+        return jwt.decode(  # type: ignore[no-any-return]
+            token,
+            cfg.jwt_secret,
+            algorithms=[cfg.jwt_algorithm],
+            audience=audience,
+            issuer=cfg.jwt_issuer,
+            leeway=cfg.jwt_leeway_seconds,
+            options={"require": ["exp", "iat", "sub", "typ"]},
+        )
+    except jwt.MissingRequiredClaimError as exc:
+        # Legacy token from before iss/aud were added — verify everything else
+        # and accept it. Remove this branch after the longest TTL has elapsed
+        # post-deploy.
+        if exc.claim not in {"iss", "aud"}:
+            raise TokenError(str(exc)) from exc
+        try:
+            return jwt.decode(  # type: ignore[no-any-return]
+                token,
+                cfg.jwt_secret,
+                algorithms=[cfg.jwt_algorithm],
+                leeway=cfg.jwt_leeway_seconds,
+                options={
+                    "verify_aud": False,
+                    "verify_iss": False,
+                    "require": ["exp", "iat", "sub", "typ"],
+                },
+            )
+        except jwt.PyJWTError as fallback_exc:
+            raise TokenError(str(fallback_exc)) from fallback_exc
+    except jwt.PyJWTError as exc:
+        raise TokenError(str(exc)) from exc
+
+
 def create_access_token(
     *,
     user_id: uuid.UUID,
@@ -69,6 +116,8 @@ def create_access_token(
         "iat": _now(),
         "jti": secrets.token_urlsafe(16),
         "typ": TOKEN_TYPE_ACCESS,
+        "iss": cfg.jwt_issuer,
+        "aud": cfg.jwt_audience_api,
     }
     token = jwt.encode(payload, cfg.jwt_secret, algorithm=cfg.jwt_algorithm)
     return token, expires_at
@@ -76,10 +125,7 @@ def create_access_token(
 
 def decode_access_token(token: str, *, settings: Settings | None = None) -> AccessTokenClaims:
     cfg = settings or get_settings()
-    try:
-        payload = jwt.decode(token, cfg.jwt_secret, algorithms=[cfg.jwt_algorithm])
-    except jwt.PyJWTError as exc:
-        raise TokenError(str(exc)) from exc
+    payload = _decode_with_audience(token, cfg=cfg, audience=cfg.jwt_audience_api)
     if payload.get("typ") != TOKEN_TYPE_ACCESS:
         raise TokenError("unexpected token type")
     sub = payload.get("sub")
@@ -91,7 +137,7 @@ def decode_access_token(token: str, *, settings: Settings | None = None) -> Acce
     return AccessTokenClaims(
         sub=sub,
         role=role,
-        exp=datetime.fromtimestamp(exp, tz=UTC) if exp else _now(),
+        exp=datetime.fromtimestamp(exp, tz=UTC) if isinstance(exp, int | float) else _now(),
         jti=jti,
     )
 
@@ -112,6 +158,8 @@ def create_ws_chat_token(
         "iat": _now(),
         "jti": secrets.token_urlsafe(12),
         "typ": TOKEN_TYPE_WS_CHAT,
+        "iss": cfg.jwt_issuer,
+        "aud": cfg.jwt_audience_ws_chat,
     }
     token = jwt.encode(payload, cfg.jwt_secret, algorithm=cfg.jwt_algorithm)
     return token, expires_at
@@ -119,10 +167,7 @@ def create_ws_chat_token(
 
 def decode_ws_chat_token(token: str, *, settings: Settings | None = None) -> WsChatClaims:
     cfg = settings or get_settings()
-    try:
-        payload = jwt.decode(token, cfg.jwt_secret, algorithms=[cfg.jwt_algorithm])
-    except jwt.PyJWTError as exc:
-        raise TokenError(str(exc)) from exc
+    payload = _decode_with_audience(token, cfg=cfg, audience=cfg.jwt_audience_ws_chat)
     if payload.get("typ") != TOKEN_TYPE_WS_CHAT:
         raise TokenError("unexpected token type")
     sub = payload.get("sub")
@@ -134,7 +179,7 @@ def decode_ws_chat_token(token: str, *, settings: Settings | None = None) -> WsC
     return WsChatClaims(
         user_id=sub,
         conversation_id=conv,
-        exp=datetime.fromtimestamp(exp, tz=UTC) if exp else _now(),
+        exp=datetime.fromtimestamp(exp, tz=UTC) if isinstance(exp, int | float) else _now(),
         jti=jti,
     )
 

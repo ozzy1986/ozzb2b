@@ -5,12 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { login } from '@/lib/api';
 import { humanizeError } from '@/lib/errors';
+import { safeNextPath } from '@/lib/safe-next';
 import { ErrorAlert } from './ErrorAlert';
 
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get('next') ?? '/';
+  // Sanitize `?next=` so it can never trigger an open redirect to a foreign
+  // origin (e.g. `?next=//evil.example` or `?next=https://evil.example`).
+  const next = safeNextPath(params.get('next')) ?? '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export function LoginForm() {
     <form className="auth-form" onSubmit={onSubmit} noValidate>
       <h1>Вход</h1>
       <label>
-        Email
+        Электронная почта
         <input
           type="email"
           name="email"

@@ -36,6 +36,19 @@ type Handler struct {
 	ServiceID string
 }
 
+const (
+	// readyProbeTimeout bounds the Redis PING latency for /ready so a slow
+	// dependency cannot stall liveness probes from kube/docker.
+	readyProbeTimeout = 2 * time.Second
+	// sessionGraceMargin is how long after a token's `exp` we still allow an
+	// already-open WebSocket to keep streaming. We keep it short so a stolen
+	// token is implicitly revoked soon after expiry.
+	sessionGraceMargin = 1 * time.Hour
+	// pingTimeout is the max round-trip we wait for a single keepalive ping
+	// before declaring the connection dead.
+	pingTimeout = 5 * time.Second
+)
+
 // Register attaches every HTTP route on the supplied mux.
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/health", h.health)
@@ -54,7 +67,7 @@ func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), readyProbeTimeout)
 	defer cancel()
 	if err := h.PubSub.Ping(ctx); err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, healthResponse{
@@ -99,7 +112,7 @@ func (h *Handler) websocket(w http.ResponseWriter, r *http.Request) {
 	// We cap the total session length at the claims' expiry + a margin: a
 	// client that refuses to reconnect keeps its token implicitly bound.
 	now := h.NowFn()
-	deadline := claims.ExpiresAt.Add(1 * time.Hour)
+	deadline := claims.ExpiresAt.Add(sessionGraceMargin)
 	if !deadline.After(now) {
 		h.Logger.Info("ws.token_already_expired", "conv", claims.ConversationID)
 		return
@@ -144,7 +157,7 @@ func (h *Handler) websocket(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		case <-pingTicker.C:
-			pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
+			pingCtx, pingCancel := context.WithTimeout(ctx, pingTimeout)
 			err := conn.Ping(pingCtx)
 			pingCancel()
 			if err != nil {

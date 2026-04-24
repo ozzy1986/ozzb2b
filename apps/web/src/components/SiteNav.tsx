@@ -23,7 +23,7 @@ export function SiteNav() {
         <Link href="/admin/analytics">Аналитика</Link>
       ) : null}
       <a href="https://github.com/ozzy1986/ozzb2b" target="_blank" rel="noreferrer">
-        GitHub
+        Исходный код
       </a>
     </nav>
   );

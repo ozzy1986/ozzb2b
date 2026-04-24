@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import Select, func, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from ozzb2b_api.db.models import (
@@ -117,57 +118,86 @@ async def list_legal_forms(session: AsyncSession, country_code: str | None) -> l
     return list((await session.execute(stmt)).scalars().all())
 
 
+async def _count_axis(
+    session: AsyncSession,
+    axis: str,
+    f: ProviderFilter,
+) -> list[tuple[str, str, int]]:
+    """Run a single facet axis on ``session`` and return ``[(value, label, count)]``."""
+    flt = ProviderFilter(
+        query=f.query,
+        category_slugs=() if axis == "categories" else f.category_slugs,
+        country_codes=() if axis == "countries" else f.country_codes,
+        city_slugs=() if axis == "cities" else f.city_slugs,
+        legal_form_codes=() if axis == "legal_forms" else f.legal_form_codes,
+    )
+    base = select(Provider)
+    filtered = _apply_filter(base, flt).distinct().subquery()
+    if axis == "countries":
+        stmt = (
+            select(Country.code, Country.name, func.count(filtered.c.id))
+            .join(filtered, filtered.c.country_id == Country.id)
+            .group_by(Country.code, Country.name)
+            .order_by(func.count(filtered.c.id).desc(), Country.name.asc())
+        )
+    elif axis == "cities":
+        stmt = (
+            select(City.slug, City.name, func.count(filtered.c.id))
+            .join(filtered, filtered.c.city_id == City.id)
+            .group_by(City.slug, City.name)
+            .order_by(func.count(filtered.c.id).desc(), City.name.asc())
+        )
+    elif axis == "legal_forms":
+        stmt = (
+            select(LegalForm.code, LegalForm.name, func.count(filtered.c.id))
+            .join(filtered, filtered.c.legal_form_id == LegalForm.id)
+            .group_by(LegalForm.code, LegalForm.name)
+            .order_by(func.count(filtered.c.id).desc(), LegalForm.name.asc())
+        )
+    elif axis == "categories":
+        stmt = (
+            select(Category.slug, Category.name, func.count(func.distinct(filtered.c.id)))
+            .join(ProviderCategory, ProviderCategory.category_id == Category.id)
+            .join(filtered, filtered.c.id == ProviderCategory.provider_id)
+            .group_by(Category.slug, Category.name)
+            .order_by(func.count(func.distinct(filtered.c.id)).desc(), Category.name.asc())
+        )
+    else:
+        return []
+    rows = (await session.execute(stmt)).all()
+    return [(str(r[0]), str(r[1]), int(r[2])) for r in rows]
+
+
+_AXES: tuple[str, ...] = ("categories", "countries", "cities", "legal_forms")
+
+
 async def facet_counts(
     session: AsyncSession, f: ProviderFilter
 ) -> dict[str, list[tuple[str, str, int]]]:
-    """Compute facet counts for the current filter set, ignoring the facet's own axis."""
-    async def count_axis(axis: str) -> list[tuple[str, str, int]]:
-        flt = ProviderFilter(
-            query=f.query,
-            category_slugs=() if axis == "categories" else f.category_slugs,
-            country_codes=() if axis == "countries" else f.country_codes,
-            city_slugs=() if axis == "cities" else f.city_slugs,
-            legal_form_codes=() if axis == "legal_forms" else f.legal_form_codes,
-        )
-        base = select(Provider)
-        filtered = _apply_filter(base, flt).distinct().subquery()
-        if axis == "countries":
-            stmt = (
-                select(Country.code, Country.name, func.count(filtered.c.id))
-                .join(filtered, filtered.c.country_id == Country.id)
-                .group_by(Country.code, Country.name)
-                .order_by(func.count(filtered.c.id).desc(), Country.name.asc())
-            )
-        elif axis == "cities":
-            stmt = (
-                select(City.slug, City.name, func.count(filtered.c.id))
-                .join(filtered, filtered.c.city_id == City.id)
-                .group_by(City.slug, City.name)
-                .order_by(func.count(filtered.c.id).desc(), City.name.asc())
-            )
-        elif axis == "legal_forms":
-            stmt = (
-                select(LegalForm.code, LegalForm.name, func.count(filtered.c.id))
-                .join(filtered, filtered.c.legal_form_id == LegalForm.id)
-                .group_by(LegalForm.code, LegalForm.name)
-                .order_by(func.count(filtered.c.id).desc(), LegalForm.name.asc())
-            )
-        elif axis == "categories":
-            stmt = (
-                select(Category.slug, Category.name, func.count(func.distinct(filtered.c.id)))
-                .join(ProviderCategory, ProviderCategory.category_id == Category.id)
-                .join(filtered, filtered.c.id == ProviderCategory.provider_id)
-                .group_by(Category.slug, Category.name)
-                .order_by(func.count(func.distinct(filtered.c.id)).desc(), Category.name.asc())
-            )
-        else:
-            return []
-        rows = (await session.execute(stmt)).all()
-        return [(str(r[0]), str(r[1]), int(r[2])) for r in rows]
+    """Compute facet counts for the current filter set, one query per axis.
 
-    return {
-        "categories": await count_axis("categories"),
-        "countries": await count_axis("countries"),
-        "cities": await count_axis("cities"),
-        "legal_forms": await count_axis("legal_forms"),
-    }
+    The four axes are independent. When the session's bind is an Engine we
+    open one fresh AsyncSession per axis and run them concurrently — each
+    axis lands on its own pooled DB connection, so wall-clock latency drops
+    from ``4 * t`` to ~``t``. AsyncSession itself is not safe to share
+    across tasks, hence the per-axis session.
+
+    When no separate engine is available (rare, mostly tests with a single
+    connection) we fall back to running them sequentially on the supplied
+    session.
+    """
+    bind = session.get_bind()
+    if isinstance(bind, AsyncEngine):
+        sm = async_sessionmaker(bind, expire_on_commit=False, class_=AsyncSession)
+
+        async def _isolated(axis: str) -> tuple[str, list[tuple[str, str, int]]]:
+            async with sm() as s:
+                return axis, await _count_axis(s, axis, f)
+
+        results = await asyncio.gather(*(_isolated(a) for a in _AXES))
+        return dict(results)
+
+    out: dict[str, list[tuple[str, str, int]]] = {}
+    for axis in _AXES:
+        out[axis] = await _count_axis(session, axis, f)
+    return out

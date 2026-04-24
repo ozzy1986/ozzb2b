@@ -18,6 +18,8 @@ from urllib.robotparser import RobotFileParser
 import httpx
 import structlog
 
+from ozzb2b_scraper.config import get_settings
+
 log = structlog.get_logger("ozzb2b_scraper.robots")
 
 
@@ -39,6 +41,21 @@ class RobotsCache:
             return True
         return parser.can_fetch(self._user_agent, url)
 
+    def _on_fetch_failure(self, key: str, *, error: str) -> RobotFileParser:
+        """Pick the strict-vs-permissive policy based on settings.
+
+        ``robots_strict=True`` makes a missing/broken robots.txt deny every
+        URL on the host (safer for production crawling); the default keeps
+        the historical fail-open behaviour for resilience.
+        """
+        if get_settings().robots_strict:
+            log.warning("robots.fetch.failed_deny", host=key, error=error)
+            self._parsers[key] = _DenyAll()
+        else:
+            log.debug("robots.fetch.failed", host=key, error=error)
+            self._parsers[key] = _AllowAll()
+        return self._parsers[key]
+
     async def _parser_for(self, url: str) -> RobotFileParser | None:
         split = urlsplit(url)
         if not split.scheme or not split.netloc:
@@ -53,20 +70,15 @@ class RobotsCache:
         try:
             resp = await self._client.get(robots_url)
         except httpx.HTTPError as exc:
-            log.debug("robots.fetch.failed", host=key, error=str(exc))
-            # Fail-open: no parser means "is_allowed() -> True".
-            self._parsers[key] = _AllowAll()
-            return self._parsers[key]
+            return self._on_fetch_failure(key, error=str(exc))
         if resp.status_code >= 400:
-            # Many small sites just return 404 for /robots.txt — treat as allow.
-            self._parsers[key] = _AllowAll()
-            return self._parsers[key]
+            # Many small sites just return 404 for /robots.txt — treat as
+            # allow unless strict mode is on.
+            return self._on_fetch_failure(key, error=f"http {resp.status_code}")
         try:
             parser.parse(resp.text.splitlines())
         except Exception as exc:  # noqa: BLE001 - be robust against malformed content
-            log.debug("robots.parse.failed", host=key, error=str(exc))
-            self._parsers[key] = _AllowAll()
-            return self._parsers[key]
+            return self._on_fetch_failure(key, error=f"parse: {exc}")
         self._parsers[key] = parser
         return parser
 
@@ -80,3 +92,13 @@ class _AllowAll(RobotFileParser):
 
     def can_fetch(self, useragent: str, url: str) -> bool:  # noqa: ARG002 - interface parity
         return True
+
+
+class _DenyAll(RobotFileParser):
+    """A parser replacement that blocks every URL.
+
+    Used when ``robots_strict`` is on and we couldn't fetch/parse robots.txt.
+    """
+
+    def can_fetch(self, useragent: str, url: str) -> bool:  # noqa: ARG002 - interface parity
+        return False

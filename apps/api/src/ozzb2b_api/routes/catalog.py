@@ -6,8 +6,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from ozzb2b_api.clients.cache import get_or_set
 from ozzb2b_api.clients.events import EVENT_PROVIDER_VIEWED, get_event_emitter
-from ozzb2b_api.db.models import Provider
 from ozzb2b_api.routes.deps import DbSession
 from ozzb2b_api.schemas.catalog import (
     CategoryPublic,
@@ -19,55 +19,16 @@ from ozzb2b_api.schemas.catalog import (
     ProviderFacets,
     ProviderFacetValue,
     ProviderListResponse,
-    ProviderSummary,
 )
 from ozzb2b_api.services import catalog as catalog_service
+from ozzb2b_api.services.provider_mapping import to_detail, to_summary
+
+# Reference data changes at most once per deploy; a 5-minute cache is more
+# than enough freshness while removing a chunk of repetitive DB hits during
+# catalog navigation.
+_REFERENCE_TTL_SECONDS = 5 * 60
 
 router = APIRouter(tags=["catalog"])
-
-
-def _to_summary(provider: Provider) -> ProviderSummary:
-    return ProviderSummary(
-        id=provider.id,
-        slug=provider.slug,
-        display_name=provider.display_name,
-        description=provider.description,
-        country=CountryPublic.model_validate(provider.country) if provider.country else None,
-        city=CityPublic.model_validate(provider.city) if provider.city else None,
-        legal_form=LegalFormPublic.model_validate(provider.legal_form)
-        if provider.legal_form
-        else None,
-        year_founded=provider.year_founded,
-        employee_count_range=provider.employee_count_range,
-        logo_url=provider.logo_url,
-        categories=[CategoryPublic.model_validate(c) for c in provider.categories],
-        last_scraped_at=provider.last_scraped_at,
-    )
-
-
-def _to_detail(provider: Provider) -> ProviderDetail:
-    summary = _to_summary(provider)
-    return ProviderDetail(
-        **summary.model_dump(),
-        legal_name=provider.legal_name,
-        website=provider.website,
-        email=provider.email,
-        phone=provider.phone,
-        address=provider.address,
-        registration_number=provider.registration_number,
-        tax_id=provider.tax_id,
-        source=provider.source,
-        source_url=provider.source_url,
-        status=provider.status.value,
-        is_claimed=bool(provider.is_claimed),
-        created_at=provider.created_at,
-        updated_at=provider.updated_at,
-    )
-
-
-def to_provider_detail(provider: Provider) -> ProviderDetail:
-    """Public alias for the internal detail mapper so other routers can reuse it."""
-    return _to_detail(provider)
 
 
 @router.get("/providers", response_model=ProviderListResponse)
@@ -92,7 +53,7 @@ async def list_providers_endpoint(
         offset=offset,
     )
     total, rows = await catalog_service.list_providers(db, f)
-    items = [_to_summary(p) for p in rows]
+    items = [to_summary(p) for p in rows]
     facets: ProviderFacets | None = None
     if with_facets:
         counts = await catalog_service.facet_counts(db, f)
@@ -135,13 +96,24 @@ async def get_provider_endpoint(slug: str, db: DbSession) -> ProviderDetail:
             "category_slugs": [c.slug for c in provider.categories],
         },
     )
-    return _to_detail(provider)
+    return to_detail(provider)
 
 
 @router.get("/categories", response_model=list[CategoryPublic])
 async def list_categories_endpoint(db: DbSession) -> list[CategoryPublic]:
-    rows = await catalog_service.list_categories(db)
-    return [CategoryPublic.model_validate(c) for c in rows]
+    async def _load() -> list[CategoryPublic]:
+        rows = await catalog_service.list_categories(db)
+        return [CategoryPublic.model_validate(c) for c in rows]
+
+    return await get_or_set(
+        "ref:categories:v1",
+        ttl_seconds=_REFERENCE_TTL_SECONDS,
+        loader=_load,
+        encode=lambda items: [c.model_dump(mode="json") for c in items],
+        decode=lambda raw: [
+            CategoryPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+        ],
+    )
 
 
 @router.get("/categories/tree", response_model=list[CategoryTreeNode])
@@ -173,8 +145,19 @@ async def categories_tree_endpoint(db: DbSession) -> list[CategoryTreeNode]:
 
 @router.get("/countries", response_model=list[CountryPublic])
 async def list_countries_endpoint(db: DbSession) -> list[CountryPublic]:
-    rows = await catalog_service.list_countries(db)
-    return [CountryPublic.model_validate(c) for c in rows]
+    async def _load() -> list[CountryPublic]:
+        rows = await catalog_service.list_countries(db)
+        return [CountryPublic.model_validate(c) for c in rows]
+
+    return await get_or_set(
+        "ref:countries:v1",
+        ttl_seconds=_REFERENCE_TTL_SECONDS,
+        loader=_load,
+        encode=lambda items: [c.model_dump(mode="json") for c in items],
+        decode=lambda raw: [
+            CountryPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+        ],
+    )
 
 
 @router.get("/cities", response_model=list[CityPublic])
@@ -182,8 +165,19 @@ async def list_cities_endpoint(
     db: DbSession,
     country: Annotated[str | None, Query(description="ISO country code")] = None,
 ) -> list[CityPublic]:
-    rows = await catalog_service.list_cities(db, country)
-    return [CityPublic.model_validate(c) for c in rows]
+    async def _load() -> list[CityPublic]:
+        rows = await catalog_service.list_cities(db, country)
+        return [CityPublic.model_validate(c) for c in rows]
+
+    return await get_or_set(
+        f"ref:cities:v1:{country or '*'}",
+        ttl_seconds=_REFERENCE_TTL_SECONDS,
+        loader=_load,
+        encode=lambda items: [c.model_dump(mode="json") for c in items],
+        decode=lambda raw: [
+            CityPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+        ],
+    )
 
 
 @router.get("/legal-forms", response_model=list[LegalFormPublic])
@@ -191,5 +185,16 @@ async def list_legal_forms_endpoint(
     db: DbSession,
     country: Annotated[str | None, Query(description="ISO country code")] = None,
 ) -> list[LegalFormPublic]:
-    rows = await catalog_service.list_legal_forms(db, country)
-    return [LegalFormPublic.model_validate(lf) for lf in rows]
+    async def _load() -> list[LegalFormPublic]:
+        rows = await catalog_service.list_legal_forms(db, country)
+        return [LegalFormPublic.model_validate(lf) for lf in rows]
+
+    return await get_or_set(
+        f"ref:legal-forms:v1:{country or '*'}",
+        ttl_seconds=_REFERENCE_TTL_SECONDS,
+        loader=_load,
+        encode=lambda items: [c.model_dump(mode="json") for c in items],
+        decode=lambda raw: [
+            LegalFormPublic.model_validate(c) for c in raw  # type: ignore[union-attr]
+        ],
+    )

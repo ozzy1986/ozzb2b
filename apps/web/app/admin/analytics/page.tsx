@@ -2,13 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   getAnalyticsSummary,
-  getMe,
   getTopProviders,
   getTopSearches,
 } from '@/lib/api';
 import { humanizeError } from '@/lib/errors';
 import type { AnalyticsSummary, TopProviders, TopQueries } from '@/lib/types';
 import { authHeaders } from '@/lib/server-fetch';
+import { requireAdmin } from '@/lib/auth-guard';
 
 export const metadata: Metadata = {
   title: 'Аналитика',
@@ -48,28 +48,10 @@ export default async function AdminAnalyticsPage({
   const params = await searchParams;
   const days = Math.max(1, Math.min(365, Number.parseInt(params.days ?? '7', 10) || 7));
 
+  await requireAdmin('/admin/analytics');
+
   const headers = await authHeaders();
   const init = { headers };
-
-  const me = await getMe(init).catch(() => null);
-  if (!me) {
-    return (
-      <div className="hero">
-        <h1>Аналитика</h1>
-        <p>
-          Требуется вход в аккаунт с ролью администратора. <Link href="/login">Войти</Link>
-        </p>
-      </div>
-    );
-  }
-  if (me.role !== 'admin') {
-    return (
-      <div className="hero">
-        <h1>Доступ закрыт</h1>
-        <p>Раздел доступен только администраторам.</p>
-      </div>
-    );
-  }
 
   const [summary, searches, providers] = await Promise.all([
     guard<AnalyticsSummary>(getAnalyticsSummary(days, init)),

@@ -20,14 +20,16 @@ const (
 // header by coder/websocket (scheme is stripped before matching), so we store
 // bare hostnames here. Use `OZZB2B_CHAT_ALLOWED_ORIGINS` to extend.
 const (
-	defaultHTTPAddr         = ":8090"
-	defaultAllowedOrigins   = "ozzb2b.com,www.ozzb2b.com"
-	defaultRedisURL         = "redis://localhost:6379/3"
-	defaultReadTimeout      = 30 * time.Second
-	defaultWriteTimeout     = 30 * time.Second
+	defaultHTTPAddr       = ":8090"
+	defaultAllowedOrigins = "ozzb2b.com,www.ozzb2b.com"
+	defaultRedisURL       = "redis://localhost:6379/3"
+	// HTTP server-level read/write deadlines are intentionally zero for the
+	// long-lived WebSocket: the per-frame deadlines below are enforced
+	// inside the handler instead. Only the idle timeout matters for closing
+	// orphaned plain-HTTP keep-alive connections.
 	defaultIdleTimeout      = 60 * time.Second
+	defaultWriteTimeout     = 30 * time.Second
 	defaultPingInterval     = 30 * time.Second
-	defaultPongWait         = 60 * time.Second
 	defaultMaxClientMessage = 4 * 1024
 )
 
@@ -36,13 +38,13 @@ type Config struct {
 	HTTPAddr         string
 	JWTSecret        string
 	JWTAlgorithm     string
+	JWTAudience      string // optional: enforce `aud` when non-empty
+	JWTIssuer        string // optional: enforce `iss` when non-empty
 	RedisURL         string
 	AllowedOrigins   []string
-	ReadTimeout      time.Duration
 	WriteTimeout     time.Duration
 	IdleTimeout      time.Duration
 	PingInterval     time.Duration
-	PongWait         time.Duration
 	MaxClientMessage int64
 	Version          string
 }
@@ -58,13 +60,13 @@ func Load(version string) (*Config, error) {
 		HTTPAddr:         envOr("OZZB2B_CHAT_HTTP_ADDR", defaultHTTPAddr),
 		JWTSecret:        secret,
 		JWTAlgorithm:     envOr("OZZB2B_JWT_ALGORITHM", "HS256"),
+		JWTAudience:      strings.TrimSpace(os.Getenv("OZZB2B_JWT_AUDIENCE_WS_CHAT")),
+		JWTIssuer:        strings.TrimSpace(os.Getenv("OZZB2B_JWT_ISSUER")),
 		RedisURL:         envOr("OZZB2B_REDIS_URL", defaultRedisURL),
 		AllowedOrigins:   splitCSV(envOr("OZZB2B_CHAT_ALLOWED_ORIGINS", defaultAllowedOrigins)),
-		ReadTimeout:      defaultReadTimeout,
 		WriteTimeout:     defaultWriteTimeout,
 		IdleTimeout:      defaultIdleTimeout,
 		PingInterval:     defaultPingInterval,
-		PongWait:         defaultPongWait,
 		MaxClientMessage: defaultMaxClientMessage,
 		Version:          version,
 	}

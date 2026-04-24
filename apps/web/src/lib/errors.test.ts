@@ -6,11 +6,11 @@ describe('humanizeError', () => {
   it('maps known English API details to Russian', () => {
     expect(
       humanizeError(new ApiError(401, 'invalid email or password'), 'auth-login'),
-    ).toBe('Неверный email или пароль.');
+    ).toBe('Неверный адрес электронной почты или пароль.');
 
     expect(
       humanizeError(new ApiError(409, 'email already registered'), 'auth-register'),
-    ).toBe('Пользователь с таким email уже зарегистрирован.');
+    ).toBe('Пользователь с такой электронной почтой уже зарегистрирован.');
 
     expect(
       humanizeError(new ApiError(404, 'provider not found'), 'generic'),
@@ -50,7 +50,7 @@ describe('humanizeError', () => {
         new ApiError(422, 'body.email: value is not a valid email address'),
         'auth-register',
       ),
-    ).toBe('Проверьте корректность email.');
+    ).toBe('Проверьте корректность адреса электронной почты.');
   });
 
   it('translates network errors without leaking English', () => {

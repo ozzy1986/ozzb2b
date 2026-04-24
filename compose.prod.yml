@@ -90,6 +90,10 @@ services:
         "worker",
         "--loglevel=INFO",
         "--concurrency=1",
+        # Recycle each worker after 100 tasks so accidental memory growth
+        # (e.g. an exotic site that puffs up parsed objects) cannot creep
+        # past the small VPS budget over a long-lived process.
+        "--max-tasks-per-child=100",
       ]
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -82,8 +82,14 @@ async def test_rate_limiter_fails_open_when_redis_hangs() -> None:
         )
 
 
-def test_client_ip_prefers_x_forwarded_for() -> None:
-    ip = client_ip({"x-forwarded-for": "1.2.3.4, 10.0.0.1"}, fallback="127.0.0.1")
+def test_client_ip_prefers_x_forwarded_for_when_proxy_count_set() -> None:
+    # XFF must be opted into via trusted_proxy_count; without it we never
+    # trust the header (anti-spoofing default).
+    ip = client_ip(
+        {"x-forwarded-for": "1.2.3.4, 10.0.0.1"},
+        fallback="127.0.0.1",
+        trusted_proxy_count=1,
+    )
     assert ip == "1.2.3.4"
 
 
@@ -93,4 +99,13 @@ def test_client_ip_falls_back_when_no_header() -> None:
 
 
 def test_client_ip_handles_case_variants() -> None:
-    assert client_ip({"X-Forwarded-For": "2.2.2.2"}, fallback="127.0.0.1") == "2.2.2.2"
+    # With one trusted hop and a single-entry chain, the leftmost (==only)
+    # entry is the best available answer.
+    assert (
+        client_ip(
+            {"X-Forwarded-For": "2.2.2.2"},
+            fallback="127.0.0.1",
+            trusted_proxy_count=1,
+        )
+        == "2.2.2.2"
+    )

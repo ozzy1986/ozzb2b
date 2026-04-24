@@ -7,11 +7,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from celery import Celery
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from ozzb2b_api.config import get_settings
+from ozzb2b_api.clients import scraper_jobs
 from ozzb2b_api.db.models import ProviderClaim, User, UserRole
 from ozzb2b_api.routes.deps import DbSession, get_current_user
 from ozzb2b_api.schemas.claims import ClaimPublic, ClaimRejectRequest
@@ -25,12 +24,6 @@ def _require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.role != UserRole.ADMIN:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "admin only")
     return user
-
-
-def _celery_client() -> Celery:
-    cfg = get_settings()
-    c = Celery("ozzb2b_scraper", broker=cfg.redis_url, backend=cfg.redis_url)
-    return c
 
 
 class ScrapeTriggerRequest(BaseModel):
@@ -60,12 +53,8 @@ async def trigger_scrape(
     payload: ScrapeTriggerRequest,
     _admin: Annotated[User, Depends(_require_admin)],
 ) -> ScrapeTriggerResponse:
-    c = _celery_client()
-    result = c.send_task(
-        "ozzb2b.scraper.crawl_source",
-        args=[payload.source_slug, payload.limit],
-    )
-    return ScrapeTriggerResponse(task_id=result.id, source_slug=payload.source_slug)
+    job = await scraper_jobs.enqueue_crawl_source(payload.source_slug, payload.limit)
+    return ScrapeTriggerResponse(task_id=job.task_id, source_slug=payload.source_slug)
 
 
 @router.post(
@@ -77,9 +66,8 @@ async def trigger_scrape_all(
     payload: ScrapeAllTriggerRequest,
     _admin: Annotated[User, Depends(_require_admin)],
 ) -> ScrapeAllTriggerResponse:
-    c = _celery_client()
-    result = c.send_task("ozzb2b.scraper.crawl_all", args=[payload.limit])
-    return ScrapeAllTriggerResponse(task_id=result.id)
+    job = await scraper_jobs.enqueue_crawl_all(payload.limit)
+    return ScrapeAllTriggerResponse(task_id=job.task_id)
 
 
 class AnalyticsSummaryItem(BaseModel):
@@ -168,12 +156,9 @@ async def approve_claim_endpoint(
     admin: Annotated[User, Depends(_require_admin)],
 ) -> ClaimPublic:
     claim = await _load_claim_or_404(db, claim_id)
-    try:
-        updated = await claims_service.admin_verify_claim(db, claim=claim, reviewer=admin)
-    except claims_service.ProviderAlreadyClaimedError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
-    except claims_service.ClaimError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    # ClaimError / ProviderAlreadyClaimedError are translated to HTTP via the
+    # global DomainError handler in `ozzb2b_api.app`.
+    updated = await claims_service.admin_verify_claim(db, claim=claim, reviewer=admin)
     return ClaimPublic.model_validate(updated)
 
 

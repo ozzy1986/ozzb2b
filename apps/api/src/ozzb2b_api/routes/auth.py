@@ -44,7 +44,11 @@ async def _enforce_rate_limit(
     if not cfg.rate_limit_enabled or limit <= 0:
         return
     limiter = RateLimiter(redis=get_redis(), window_seconds=cfg.rate_limit_window_seconds)
-    ip = client_ip(_request_headers(request), request.client.host if request.client else None)
+    ip = client_ip(
+        _request_headers(request),
+        request.client.host if request.client else None,
+        trusted_proxy_count=cfg.trusted_proxy_count,
+    )
 
     # Always throttle by IP; additionally throttle by the supplied scope
     # (e.g. email) so a single attacker can't burn through many accounts

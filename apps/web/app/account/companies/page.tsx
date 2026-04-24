@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { listMyProviders, listMyClaims } from '@/lib/api';
 import { authHeaders } from '@/lib/server-fetch';
+import { requireAuthCookie } from '@/lib/auth-guard';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 
 export const metadata: Metadata = {
@@ -15,10 +14,7 @@ export const revalidate = 0;
 export const dynamic = 'force-dynamic';
 
 export default async function MyCompaniesPage() {
-  const jar = await cookies();
-  if (!jar.get('ozzb2b_at')) {
-    redirect('/login?next=/account/companies');
-  }
+  await requireAuthCookie('/account/companies');
 
   const headers = await authHeaders();
   const [providersResult, claimsResult] = await Promise.allSettled([

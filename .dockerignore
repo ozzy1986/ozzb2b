@@ -21,7 +21,6 @@
 !**/.env.example
 **/credentials.json
 
-legacy/
 deploy/
 *.md
 Thumbs.db

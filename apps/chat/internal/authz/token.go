@@ -23,9 +23,17 @@ type Claims struct {
 }
 
 // Verifier decodes and validates chat tokens against a configured HMAC secret.
+//
+// `expectedAudience` and `expectedIssuer` should mirror what the API mints
+// (defaults `ozzb2b-ws-chat` / `ozzb2b`). When set, a token without the
+// matching `aud`/`iss` is rejected. They may be left empty during the
+// rolling deploy that introduces these claims, after which they should be
+// configured for full defense-in-depth.
 type Verifier struct {
-	secret    []byte
-	algorithm string
+	secret           []byte
+	algorithm        string
+	expectedAudience string
+	expectedIssuer   string
 }
 
 // NewVerifier builds a Verifier from the shared HMAC secret and algorithm.
@@ -43,16 +51,40 @@ func NewVerifier(secret, algorithm string) (*Verifier, error) {
 	return &Verifier{secret: []byte(secret), algorithm: algorithm}, nil
 }
 
+// WithAudience returns a verifier that additionally enforces the JWT `aud`
+// claim. Call this only when the API has been deployed with the matching
+// `OZZB2B_JWT_AUDIENCE_WS_CHAT` value.
+func (v *Verifier) WithAudience(audience string) *Verifier {
+	cp := *v
+	cp.expectedAudience = audience
+	return &cp
+}
+
+// WithIssuer returns a verifier that additionally enforces the JWT `iss`
+// claim.
+func (v *Verifier) WithIssuer(issuer string) *Verifier {
+	cp := *v
+	cp.expectedIssuer = issuer
+	return &cp
+}
+
 // Parse validates the signature + token type and returns normalised claims.
 func (v *Verifier) Parse(raw string) (Claims, error) {
 	if raw == "" {
 		return Claims{}, errors.New("token is empty")
 	}
-	parser := jwt.NewParser(
+	opts := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{v.algorithm}),
 		jwt.WithIssuedAt(),
-		jwt.WithLeeway(5*time.Second),
-	)
+		jwt.WithLeeway(5 * time.Second),
+	}
+	if v.expectedAudience != "" {
+		opts = append(opts, jwt.WithAudience(v.expectedAudience))
+	}
+	if v.expectedIssuer != "" {
+		opts = append(opts, jwt.WithIssuer(v.expectedIssuer))
+	}
+	parser := jwt.NewParser(opts...)
 	parsed, err := parser.Parse(raw, func(t *jwt.Token) (any, error) {
 		return v.secret, nil
 	})
