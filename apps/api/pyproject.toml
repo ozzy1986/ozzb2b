@@ -54,6 +54,8 @@ dev = [
     "hypothesis>=6.112,<7",
     # sync driver used by alembic round-trip integration tests
     "psycopg[binary]>=3.2,<4",
+    # parses compose.prod.yml in the structural contract tests
+    "pyyaml>=6,<7",
 ]
 
 [build-system]

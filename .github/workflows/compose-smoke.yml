@@ -1,0 +1,108 @@
+name: compose smoke
+
+# Manual opt-in smoke test that actually boots a slice of compose.prod.yml
+# and probes the health endpoints. This burns much more runner time than the
+# structural contract test, so it's triggered on demand (or once a week at
+# 04:30 UTC) — not on every PR.
+#
+# What it catches:
+#   * image tag drift that structural YAML checks cannot (image pull failures,
+#     runtime mis-configurations);
+#   * broken docker-entrypoint scripts;
+#   * health endpoints regressing (changing paths, port shifts).
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: compose smoke (api + web + matcher + clickhouse)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stub .env.prod
+        run: |
+          # Production compose references lots of secrets; we only need
+          # interpolation to succeed in CI. Minimal safe defaults.
+          cat > .env.prod <<EOF
+          OZZB2B_ENV=ci
+          OZZB2B_POSTGRES_PASSWORD=ci
+          OZZB2B_REDIS_PASSWORD=ci
+          OZZB2B_JWT_SECRET=ci-smoke-secret-long-enough-for-hmac
+          OZZB2B_MEILI_MASTER_KEY=ci-master-key-at-least-16ch
+          OZZB2B_CLICKHOUSE_PASSWORD=ci
+          OZZB2B_GRAFANA_ADMIN_PASSWORD=ci
+          OZZB2B_ALERTMANAGER_TELEGRAM_TOKEN=ci
+          OZZB2B_ALERTMANAGER_TELEGRAM_CHAT_ID=0
+          MEILI_MASTER_KEY=ci-master-key-at-least-16ch
+          EOF
+
+      - name: Prepare bind-mount directories
+        run: |
+          # compose.prod.yml expects these to exist on the VPS under
+          # /var/www/ozzb2b.com/data. In CI we create empty tempdirs and
+          # substitute the paths at the compose-override layer.
+          sudo mkdir -p /var/www/ozzb2b.com/data/{meilisearch,clickhouse,prometheus,alertmanager,loki,promtail,grafana}
+          sudo chown -R 1000:1000 /var/www/ozzb2b.com/data
+
+      - name: Build core images
+        run: |
+          docker compose --env-file .env.prod -f compose.prod.yml build api web matcher
+
+      - name: Boot a reduced slice of prod stack
+        run: |
+          # meilisearch + api + web + matcher is enough to prove wiring; the
+          # heavier observability stack stays off to keep runner cost low.
+          docker compose --env-file .env.prod -f compose.prod.yml up -d \
+            meilisearch api web matcher
+
+      - name: Wait for services to become healthy
+        run: |
+          set -e
+          deadline=$(( $(date +%s) + 300 ))
+          services="ozzb2b-meilisearch ozzb2b-api ozzb2b-web ozzb2b-matcher"
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            all=1
+            for s in $services; do
+              status=$(docker inspect --format='{{.State.Health.Status}}' "$s" 2>/dev/null || echo "missing")
+              if [ "$status" != "healthy" ]; then
+                echo "$s = $status"
+                all=0
+              fi
+            done
+            [ "$all" = "1" ] && exit 0
+            sleep 5
+          done
+          echo "::error::services failed to become healthy within 5 minutes"
+          for s in $services; do
+            echo "=== $s ==="
+            docker logs --tail=80 "$s" || true
+          done
+          exit 1
+
+      - name: Probe health endpoints
+        run: |
+          set -e
+          curl -sfI http://127.0.0.1:7700/health
+          curl -sfI http://127.0.0.1:8001/health
+          # Matcher exposes health on its HTTP port (8090 inside → not mapped).
+          docker exec ozzb2b-matcher wget -qO- http://127.0.0.1:8090/health >/dev/null
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          for s in ozzb2b-meilisearch ozzb2b-api ozzb2b-web ozzb2b-matcher; do
+            echo "=== $s ==="
+            docker logs --tail=200 "$s" || true
+          done
+
+      - name: Tear down
+        if: always()
+        run: docker compose --env-file .env.prod -f compose.prod.yml down -v
