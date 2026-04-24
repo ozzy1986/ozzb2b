@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -46,6 +47,13 @@ func main() {
 	if err != nil {
 		logger.Error("events.config_error", "err", err)
 		os.Exit(1)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		if err := runHealthcheck(cfg.HTTPAddr); err != nil {
+			logger.Error("events.healthcheck_failed", "err", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -194,4 +202,29 @@ func pingRedis(ctx context.Context, url string) error {
 	c := redis.NewClient(opts)
 	defer c.Close()
 	return c.Ping(ctx).Err()
+}
+
+func runHealthcheck(httpAddr string) error {
+	hostPort := httpAddr
+	if hostPort == "" {
+		hostPort = ":8095"
+	}
+	if host, port, err := net.SplitHostPort(hostPort); err == nil {
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		hostPort = net.JoinHostPort(host, port)
+	}
+	url := "http://" + hostPort + "/health"
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("non-200 health status")
+	}
+	return nil
 }

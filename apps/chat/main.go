@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,6 +35,13 @@ func main() {
 	if err != nil {
 		logger.Error("chat.config_error", "err", err)
 		os.Exit(1)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		if err := runHealthcheck(cfg.HTTPAddr); err != nil {
+			logger.Error("chat.healthcheck_failed", "err", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	verifier, err := authz.NewVerifier(cfg.JWTSecret, cfg.JWTAlgorithm)
@@ -96,4 +104,29 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("chat.shutdown_error", "err", err)
 	}
+}
+
+func runHealthcheck(httpAddr string) error {
+	hostPort := httpAddr
+	if hostPort == "" {
+		hostPort = ":8090"
+	}
+	if host, port, err := net.SplitHostPort(hostPort); err == nil {
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		hostPort = net.JoinHostPort(host, port)
+	}
+	url := "http://" + hostPort + "/health"
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("non-200 health status")
+	}
+	return nil
 }

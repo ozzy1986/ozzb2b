@@ -112,11 +112,13 @@ services:
       - "127.0.0.1:8090:8090"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # Distroless runtime image has no shell/wget/curl; container-level probes
-    # based on CMD-SHELL always fail despite healthy HTTP endpoints.
-    # Keep service health validation at orchestrator level (deploy script + smoke checks).
+    # Distroless image has no shell/wget, so healthcheck uses a native binary
+    # subcommand that probes /health and exits non-zero on failure.
     healthcheck:
-      disable: true
+      test: ["CMD", "/chat", "healthcheck"]
+      interval: 15s
+      timeout: 3s
+      retries: 6
 
   matcher:
     image: ozzb2b-matcher:local
@@ -182,11 +184,13 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
-    # Distroless runtime image has no shell/wget/curl; container-level probes
-    # based on CMD-SHELL always fail despite healthy HTTP endpoints.
-    # Keep service health validation at orchestrator level (deploy script + smoke checks).
+    # Distroless image has no shell/wget, so healthcheck uses a native binary
+    # subcommand that probes /health and exits non-zero on failure.
     healthcheck:
-      disable: true
+      test: ["CMD", "/events", "healthcheck"]
+      interval: 15s
+      timeout: 3s
+      retries: 6
 
   # ------------------ Phase 5.5: observability stack ------------------
   # Prometheus scrapes the /metrics endpoints each service already exposes.
