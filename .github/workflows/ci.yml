@@ -22,8 +22,8 @@ jobs:
       run:
         working-directory: apps/api
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -39,7 +39,7 @@ jobs:
         run: pytest
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-api
           path: apps/api/coverage.xml
@@ -52,8 +52,8 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           # Lockfile isn't committed (see apps/web/.gitignore comment); cache
@@ -89,7 +89,7 @@ jobs:
         run: npm run test:coverage
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-web
           path: apps/web/coverage/lcov.info
@@ -102,8 +102,8 @@ jobs:
       run:
         working-directory: apps/chat
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           # Pinned to 1.25 so the stdlib CVEs surfaced by govulncheck are
           # already patched in the binary we build and test.
@@ -116,7 +116,7 @@ jobs:
         run: |
           chmod +x ../../scripts/check_go_coverage.sh
           ../../scripts/check_go_coverage.sh . 55
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-chat
@@ -130,8 +130,8 @@ jobs:
       run:
         working-directory: apps/events
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           # Same rationale as the chat job — 1.25 clears stdlib CVEs.
           go-version: "1.25"
@@ -144,7 +144,7 @@ jobs:
         run: |
           chmod +x ../../scripts/check_go_coverage.sh
           ../../scripts/check_go_coverage.sh . 20
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-events
@@ -158,7 +158,7 @@ jobs:
       run:
         working-directory: apps/matcher
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.85"
@@ -214,8 +214,8 @@ jobs:
       OZZB2B_INTEGRATION_DATABASE_URL: postgresql+asyncpg://ozzb2b:ozzb2b@127.0.0.1:5432/ozzb2b_test
       OZZB2B_INTEGRATION_REDIS_URL: redis://127.0.0.1:6379/0
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -239,8 +239,8 @@ jobs:
       run:
         working-directory: apps/scraper
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -254,7 +254,7 @@ jobs:
         run: pytest
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-scraper
           path: apps/scraper/coverage.xml
@@ -268,8 +268,8 @@ jobs:
     # change so API clients stay reproducible.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -304,8 +304,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -340,7 +340,7 @@ jobs:
         run: npx playwright test
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: apps/e2e/playwright-report
@@ -354,10 +354,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [api, web]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install diff-cover
@@ -365,12 +365,12 @@ jobs:
       - name: Fetch base branch
         run: git fetch --no-tags --depth=0 origin ${{ github.base_ref }}:${{ github.base_ref }} || true
       - name: Download api coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-api
           path: coverage-artifacts/api
       - name: Download web coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-web
           path: coverage-artifacts/web
@@ -403,7 +403,7 @@ jobs:
     # in master — they would otherwise only surface during a VPS deploy.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Write a stub .env.prod so interpolation resolves
         run: |
           touch .env.prod
@@ -478,10 +478,10 @@ jobs:
       matrix:
         service: [api, web, chat, events, matcher, scraper]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
       - name: Build ${{ matrix.service }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           # matcher Dockerfile expects repo root (needs ./proto), others use their own dir.
           context: ${{ matrix.service == 'matcher' && '.' || format('apps/{0}', matrix.service) }}
@@ -510,8 +510,8 @@ jobs:
     # Hard gate: high-confidence Python security findings block merge.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -553,8 +553,8 @@ jobs:
     # Hard gate: Go dependency/runtime vulns block merge.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           # govulncheck@latest requires Go >= 1.25; also bumping toolchain
           # here clears the stdlib CVEs that are only fixed in 1.25.x.
@@ -576,7 +576,7 @@ jobs:
       run:
         working-directory: apps/matcher
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.85"
@@ -593,7 +593,7 @@ jobs:
     # Hard gate: critical filesystem vulnerabilities block merge.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -610,7 +610,7 @@ jobs:
     # fails the build and blocks the PR from merging.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -624,10 +624,10 @@ jobs:
     # / gitleaks rules.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -644,7 +644,7 @@ jobs:
     # allowlist of approved technical tokens (URLs, brand names, etc.).
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run RU-only check
         run: |
           chmod +x scripts/check_web_ru_only.sh
