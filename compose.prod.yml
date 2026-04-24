@@ -66,6 +66,11 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
 
   scraper:
     image: ozzb2b-scraper:local
@@ -103,6 +108,11 @@ services:
       - "127.0.0.1:8090:8090"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8090/metrics >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 6
 
   matcher:
     image: ozzb2b-matcher:local
@@ -168,6 +178,11 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8095/metrics >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 6
 
   # ------------------ Phase 5.5: observability stack ------------------
   # Prometheus scrapes the /metrics endpoints each service already exposes.
@@ -224,6 +239,11 @@ services:
       - /:/rootfs:ro,rslave
     mem_limit: 64m
     mem_reservation: 32m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9100/metrics >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   # Per-container CPU/RAM/disk/network + Docker stats.
   # Pinned to v0.47.2: newer 0.49.x silently stops emitting per-container
@@ -251,6 +271,11 @@ services:
       - /dev/kmsg:/dev/kmsg
     mem_limit: 192m
     mem_reservation: 96m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   # Alertmanager is opt-in: the `alertmanager.yml` file is rendered on the VPS
   # only when Telegram bot creds are present in /root/.ozzb2b_secrets. Until
@@ -310,6 +335,11 @@ services:
         condition: service_healthy
     mem_limit: 96m
     mem_reservation: 32m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9080/ready >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
 
   grafana:
     image: grafana/grafana:11.3.0
