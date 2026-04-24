@@ -74,8 +74,8 @@ async def get_or_set(
         if cached is not None:
             try:
                 return decode(json.loads(cached))
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover - cache poison, recompute
+                log.warning("cache.decode.error", key=key, err=str(exc))
 
         value = await loader()
         try:

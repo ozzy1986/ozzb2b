@@ -103,5 +103,5 @@ def test_app_factory_does_not_install_handler_twice() -> None:
         # the same exception class keeps the dict size at one entry.
         assert any(
             cls is DomainError
-            for cls in (a.exception_handlers.keys())  # type: ignore[attr-defined]
+            for cls in a.exception_handlers  # type: ignore[attr-defined]
         )

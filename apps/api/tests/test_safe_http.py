@@ -61,21 +61,25 @@ def test_validate_rejects_url_without_host() -> None:
 def test_validate_rejects_when_dns_resolves_to_private_ip() -> None:
     policy = SafeHttpPolicy()
     fake = [(0, 0, 0, "", ("10.0.0.5", 0))]
-    with patch("ozzb2b_api.security.safe_http.socket.getaddrinfo", return_value=fake):
-        with pytest.raises(UnsafeUrlError, match="forbidden address"):
-            _validate_url("https://internal.bad", policy=policy, expected_domain=None)
+    with (
+        patch("ozzb2b_api.security.safe_http.socket.getaddrinfo", return_value=fake),
+        pytest.raises(UnsafeUrlError, match="forbidden address"),
+    ):
+        _validate_url("https://internal.bad", policy=policy, expected_domain=None)
 
 
 def test_validate_pins_redirect_to_registered_domain() -> None:
     policy = SafeHttpPolicy()
     fake = [(0, 0, 0, "", ("8.8.8.8", 0))]
-    with patch("ozzb2b_api.security.safe_http.socket.getaddrinfo", return_value=fake):
-        with pytest.raises(UnsafeUrlError, match="leaves the original domain"):
-            _validate_url(
-                "https://attacker.example",
-                policy=policy,
-                expected_domain="legit.example",
-            )
+    with (
+        patch("ozzb2b_api.security.safe_http.socket.getaddrinfo", return_value=fake),
+        pytest.raises(UnsafeUrlError, match="leaves the original domain"),
+    ):
+        _validate_url(
+            "https://attacker.example",
+            policy=policy,
+            expected_domain="legit.example",
+        )
 
 
 def test_registered_domain_returns_etld_plus_one() -> None:

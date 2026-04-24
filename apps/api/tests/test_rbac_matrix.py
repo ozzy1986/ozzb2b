@@ -121,5 +121,3 @@ def test_admin_endpoints_reject_non_admin(
             f"{case.method} {case.path} must reject role={role.value}; "
             f"got {resp.status_code}: {resp.text}"
         )
-
-

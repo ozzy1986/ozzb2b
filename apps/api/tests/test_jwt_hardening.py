@@ -10,9 +10,8 @@ import pytest
 
 from ozzb2b_api.config import Settings
 from ozzb2b_api.security.tokens import (
-    TokenError,
     TOKEN_TYPE_ACCESS,
-    TOKEN_TYPE_WS_CHAT,
+    TokenError,
     create_access_token,
     create_ws_chat_token,
     decode_access_token,

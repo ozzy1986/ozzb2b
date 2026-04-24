@@ -32,7 +32,7 @@ def test_filter_expression_quotes_each_value() -> None:
         legal_form_codes=("OOO",),
     )
     parts = _meili_filter_expression(q)
-    assert "status = 'published'" == parts[0]
+    assert parts[0] == "status = 'published'"
     assert any("category_slugs = 'it'" in p for p in parts)
     assert any("country_code = 'RU'" in p and "country_code = 'BY'" in p for p in parts)
 

@@ -57,12 +57,10 @@ def _is_safe_ip(addr: str) -> bool:
         return False
     if ip.is_loopback or ip.is_private or ip.is_link_local:
         return False
-    if ip.is_multicast or ip.is_reserved or ip.is_unspecified:
-        return False
     # 169.254.169.254 is link-local already, but cloud metadata aliases
     # (e.g. fd00:ec2::254 in IMDSv2 IPv6) live in fd00::/8 which our
     # `is_private` check covers.
-    return True
+    return not (ip.is_multicast or ip.is_reserved or ip.is_unspecified)
 
 
 def _resolve(host: str) -> list[str]:

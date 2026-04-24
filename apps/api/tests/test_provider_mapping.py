@@ -33,7 +33,7 @@ def _provider_stub() -> SimpleNamespace:
             id=2,
             country_id=1,
             code="OOO",
-            name="ООО",
+            name="ООО",  # noqa: RUF001 - Cyrillic OOO is the real legal form abbreviation
             slug="ooo",
         ),
         year_founded=2010,
@@ -50,7 +50,7 @@ def _provider_stub() -> SimpleNamespace:
             ),
         ],
         last_scraped_at=datetime(2026, 4, 1, 12, 0, tzinfo=UTC),
-        legal_name="ООО ACME",
+        legal_name="ООО ACME",  # noqa: RUF001 - Cyrillic legal-form prefix kept intentionally
         website="https://acme.example",
         email="hi@acme.example",
         phone="+7 495 000-00-00",
@@ -81,7 +81,7 @@ def test_to_detail_extends_summary_with_contact_fields() -> None:
     assert detail.display_name == "ACME"
     assert detail.last_scraped_at is not None
     # Detail-only fields.
-    assert detail.legal_name == "ООО ACME"
+    assert detail.legal_name == "ООО ACME"  # noqa: RUF001 - Cyrillic legal-form prefix
     assert detail.website == "https://acme.example"
     assert detail.email == "hi@acme.example"
     assert detail.phone == "+7 495 000-00-00"

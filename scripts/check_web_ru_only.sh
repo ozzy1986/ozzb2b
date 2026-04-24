@@ -21,8 +21,11 @@ if [[ ! -d "$ROOT/app" || ! -d "$ROOT/src/components" ]]; then
 fi
 
 # Approved English technical tokens — lowercase entries only.
+# Note: the suspect extractor greps [A-Za-z]{4,}, so every token here must be
+# how the *alphabetic run* inside the source literal looks. For "ozzb2b" the
+# alpha runs are "ozzb" and "b", so we list the real shapes ("ozzb" here).
 ALLOWLIST=(
-    "ozzb2b" "github" "ozzy1986"
+    "ozzb" "ozzb2b" "github" "ozzy" "ozzy1986"
     "json" "jwt" "uuid" "url" "http" "https" "ws" "wss"
     "api" "ssr" "rsc" "html" "css" "tsx" "jsx" "svg"
     "ios" "macos" "android" "chrome" "safari" "firefox"
@@ -73,8 +76,10 @@ for file in $files; do
             | grep -Ev "^($allow_re)$" \
             || true)
         if [[ -n "$suspect" ]]; then
-            # Bilingual UI text (e.g. "Войти через GitHub") is fine.
-            if [[ "$snippet" =~ [А-Яа-яЁё] ]]; then
+            # Bilingual UI text (e.g. "Войти через GitHub") is fine. We use
+            # PCRE with the Cyrillic property so detection works even under
+            # LC_ALL=C, where POSIX ranges like [А-Яа-яЁё] do not match UTF-8.
+            if printf '%s' "$snippet" | grep -qP '\p{Cyrillic}'; then
                 continue
             fi
             echo "::error file=$file,line=$line_no::user-facing English text: $snippet"

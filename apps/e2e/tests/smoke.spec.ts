@@ -24,7 +24,7 @@ test.describe('site smoke', () => {
     // native HTML `required` / `type=email` attributes still provide a
     // baseline we want to guarantee. Submitting with empty inputs must
     // not navigate and the email field must report invalid.
-    const emailInput = page.getByRole('textbox', { name: 'Email' });
+    const emailInput = page.getByRole('textbox', { name: 'Электронная почта' });
     await expect(emailInput).toBeVisible();
 
     await page.getByRole('button', { name: /Войти/i }).click();
@@ -46,7 +46,7 @@ test.describe('site smoke', () => {
   test('register page enforces minimum password length', async ({ page }) => {
     await page.goto('/register');
 
-    await page.getByRole('textbox', { name: 'Email' }).fill('user@example.com');
+    await page.getByRole('textbox', { name: 'Электронная почта' }).fill('user@example.com');
 
     // The password input is of type=password and has no accessible text label
     // because the rendered <label> wraps both label and input; target it by

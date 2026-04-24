@@ -67,7 +67,7 @@ export function OwnedProviderEditor({ initial }: Props) {
         />
       </label>
       <label>
-        <div>Email для клиентов</div>
+        <div>Электронная почта для клиентов</div>
         <input
           type="email"
           name="email"
