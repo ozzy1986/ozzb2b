@@ -619,6 +619,12 @@ jobs:
     # Secrets must NEVER land in the repo. This is a hard gate — any finding
     # fails the build and blocks the PR from merging.
     runs-on: ubuntu-24.04
+    # gitleaks-action@v2 is the latest published tag and still ships
+    # `runs.using: node20`. Until upstream cuts a Node 24 release, we
+    # opt the runner into Node 24 explicitly so the workflow stays
+    # warning-free without holding back on a stale runtime.
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v6
         with:
