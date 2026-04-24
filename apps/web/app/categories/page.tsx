@@ -4,6 +4,7 @@ import { getCategoryTree } from '@/lib/api';
 import { trCategory, trCategoryDescription } from '@/lib/ru';
 
 export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Категории',
