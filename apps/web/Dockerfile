@@ -1,4 +1,4 @@
-FROM node:22-alpine AS deps
+FROM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json ./
 # React 19 RC + @testing-library/react 16 require --legacy-peer-deps.
@@ -7,14 +7,14 @@ COPY package.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm install --legacy-peer-deps --no-audit --no-fund
 
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
