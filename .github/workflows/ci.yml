@@ -522,14 +522,16 @@ jobs:
           cache: pip
       - name: Install audit tools
         run: |
-          python -m pip install --upgrade pip
-          pip install pip-audit bandit
+          python -m venv "$RUNNER_TEMP/security-tools"
+          "$RUNNER_TEMP/security-tools/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/security-tools/bin/pip" install pip-audit bandit
+          echo "$RUNNER_TEMP/security-tools/bin" >> "$GITHUB_PATH"
       - name: pip-audit api dependencies
         working-directory: apps/api
-        # `ozzb2b-api` is an editable local package with no PyPI entry. With
-        # `--strict` pip-audit turns every skipped distribution into an
-        # error, so we drop strict mode (the exit code still reflects real
-        # vulnerabilities) and ask pip-audit to skip editable installs.
+        # Audit the resolved project dependency set, not the GitHub runner's
+        # packaging/audit tools. `pip`, `setuptools`, and `wheel` are CI build
+        # tooling, while `ozzb2b-api` is skipped as an editable local package
+        # with no PyPI advisory entry.
         #
         # IGNORED CVEs (each with a justification):
         #   * CVE-2025-71176 (pytest) — only a code-path in collection of
@@ -540,9 +542,16 @@ jobs:
         # Every other finding must be fixed by bumping the constraint in
         # pyproject.toml.
         run: |
-          python -m pip install --upgrade pip setuptools
-          pip install -e "."
-          pip-audit --skip-editable \
+          python -m venv "$RUNNER_TEMP/api-audit-env"
+          "$RUNNER_TEMP/api-audit-env/bin/python" -m pip install --upgrade pip setuptools
+          "$RUNNER_TEMP/api-audit-env/bin/pip" install -e "."
+          "$RUNNER_TEMP/api-audit-env/bin/python" -m pip freeze \
+            --exclude-editable \
+            --exclude pip \
+            --exclude setuptools \
+            --exclude wheel \
+            > "$RUNNER_TEMP/ozzb2b-api-audit-requirements.txt"
+          pip-audit -r "$RUNNER_TEMP/ozzb2b-api-audit-requirements.txt" \
             --ignore-vuln CVE-2025-71176 \
             --ignore-vuln CVE-2026-4539 \
             --ignore-vuln PYSEC-2025-49

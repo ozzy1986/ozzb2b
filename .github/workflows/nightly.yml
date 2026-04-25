@@ -74,21 +74,39 @@ jobs:
           cache: pip
       - name: Install audit tools
         run: |
-          python -m pip install --upgrade pip setuptools
-          pip install pip-audit bandit
+          python -m venv "$RUNNER_TEMP/security-tools"
+          "$RUNNER_TEMP/security-tools/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/security-tools/bin/pip" install pip-audit bandit
+          echo "$RUNNER_TEMP/security-tools/bin" >> "$GITHUB_PATH"
       - name: pip-audit api dependencies
         working-directory: apps/api
         run: |
-          pip install -e "."
-          pip-audit --skip-editable \
+          python -m venv "$RUNNER_TEMP/api-audit-env"
+          "$RUNNER_TEMP/api-audit-env/bin/python" -m pip install --upgrade pip setuptools
+          "$RUNNER_TEMP/api-audit-env/bin/pip" install -e "."
+          "$RUNNER_TEMP/api-audit-env/bin/python" -m pip freeze \
+            --exclude-editable \
+            --exclude pip \
+            --exclude setuptools \
+            --exclude wheel \
+            > "$RUNNER_TEMP/ozzb2b-api-audit-requirements.txt"
+          pip-audit -r "$RUNNER_TEMP/ozzb2b-api-audit-requirements.txt" \
             --ignore-vuln CVE-2025-71176 \
             --ignore-vuln CVE-2026-4539 \
             --ignore-vuln PYSEC-2025-49
       - name: pip-audit scraper dependencies
         working-directory: apps/scraper
         run: |
-          pip install -e "."
-          pip-audit --skip-editable \
+          python -m venv "$RUNNER_TEMP/scraper-audit-env"
+          "$RUNNER_TEMP/scraper-audit-env/bin/python" -m pip install --upgrade pip setuptools
+          "$RUNNER_TEMP/scraper-audit-env/bin/pip" install -e "."
+          "$RUNNER_TEMP/scraper-audit-env/bin/python" -m pip freeze \
+            --exclude-editable \
+            --exclude pip \
+            --exclude setuptools \
+            --exclude wheel \
+            > "$RUNNER_TEMP/ozzb2b-scraper-audit-requirements.txt"
+          pip-audit -r "$RUNNER_TEMP/ozzb2b-scraper-audit-requirements.txt" \
             --ignore-vuln CVE-2025-71176 \
             --ignore-vuln CVE-2026-4539 \
             --ignore-vuln PYSEC-2025-49
