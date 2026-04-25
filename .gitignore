@@ -80,3 +80,7 @@ Thumbs.db
 *.tar.gz
 sitemap.xml
 sitemap.xml.gz
+
+# ---- Local sensitive handoff notes ----
+docs/AGENT_HANDOFF.md
+docs/SYNC_HANDOFF.md
