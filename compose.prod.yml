@@ -293,6 +293,14 @@ services:
       - no-new-privileges:true
     mem_limit: 64m
     mem_reservation: 32m
+    healthcheck:
+      # The image is a minimal single-binary container with no shell/wget.
+      # Prometheus verifies /metrics reachability; this checks that the
+      # exporter binary itself is runnable inside Docker's health framework.
+      test: ["CMD", "/bin/process-exporter", "-version"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
 
   # Per-container CPU/RAM/disk/network + Docker stats.
   # Pinned to v0.47.2: newer 0.49.x silently stops emitting per-container
