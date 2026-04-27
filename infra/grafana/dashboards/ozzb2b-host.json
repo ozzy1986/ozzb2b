@@ -148,15 +148,15 @@
     },
     {
       "type": "timeseries",
-      "title": "Container CPU (cores)",
+      "title": "Top cgroups CPU (cores)",
       "id": 20,
       "gridPos": {"h": 10, "w": 12, "x": 0, "y": 12},
       "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
       "targets": [
         {
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[1m]))",
+          "expr": "topk(12, sum by (id) (rate(container_cpu_usage_seconds_total{id!=\"/\",id!=\"/system.slice\",id!=\"/init.scope\"}[1m])))",
           "refId": "A",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{id}}"
         }
       ],
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
@@ -164,15 +164,15 @@
     },
     {
       "type": "timeseries",
-      "title": "Container memory (bytes)",
+      "title": "Top cgroups memory (bytes)",
       "id": 21,
       "gridPos": {"h": 10, "w": 12, "x": 12, "y": 12},
       "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
       "targets": [
         {
-          "expr": "container_memory_working_set_bytes{name!=\"\"}",
+          "expr": "topk(12, container_memory_working_set_bytes{id!=\"/\",id!=\"/system.slice\",id!=\"/init.scope\"})",
           "refId": "A",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{id}}"
         }
       ],
       "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
@@ -180,9 +180,25 @@
     },
     {
       "type": "timeseries",
+      "title": "Process group CPU %",
+      "id": 22,
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 22},
+      "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
+      "targets": [
+        {
+          "expr": "topk(12, sum by (groupname) (rate(namedprocess_namegroup_cpu_seconds_total[1m])) * 100)",
+          "refId": "A",
+          "legendFormat": "{{groupname}}"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent"}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "right"}}
+    },
+    {
+      "type": "timeseries",
       "title": "Network traffic (bytes/s)",
       "id": 30,
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
       "datasource": {"type": "prometheus", "uid": "ozzb2b-prometheus"},
       "targets": [
         {

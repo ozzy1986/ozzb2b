@@ -38,6 +38,8 @@ receivers:
           <b>{{ .Labels.alertname }}</b>
           {{ .Annotations.summary }}
           <i>{{ .Annotations.description }}</i>
+          {{ with .Annotations.diagnostics }}<pre>{{ . }}</pre>
+          {{ end -}}
           {{ with .Labels.instance }}instance: <code>{{ . }}</code>
           {{ end -}}
           {{ with .Labels.job }}job: <code>{{ . }}</code>

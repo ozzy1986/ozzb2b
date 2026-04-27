@@ -82,6 +82,7 @@ if [ -n "${OZZB2B_TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${OZZB2B_TELEGRAM_CHAT_ID:-}
         -e "s|__TELEGRAM_CHAT_ID__|${OZZB2B_TELEGRAM_CHAT_ID}|g" \
         infra/alertmanager/alertmanager.yml.tmpl \
         > infra/alertmanager/alertmanager.yml
+    chown root:65534 infra/alertmanager/alertmanager.yml
     chmod 640 infra/alertmanager/alertmanager.yml
     log "alertmanager.yml rendered"
 else

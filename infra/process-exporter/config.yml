@@ -1,0 +1,71 @@
+# process-exporter groups host processes into low-cardinality buckets so
+# CPU alerts can say which workload family was hot at the time.
+process_names:
+  - name: "ubuntu-maintenance"
+    cmdline:
+      - 'ubuntu-release-upgrader/check-new-release|apt.systemd.daily|unattended-upgrade|/usr/bin/apt|/usr/bin/dpkg'
+
+  - name: "php-fpm:{{.Matches.pool}}"
+    comm:
+      - php-fpm8.4
+    cmdline:
+      - 'pool (?P<pool>[A-Za-z0-9_.-]+)'
+
+  - name: "apache2"
+    comm:
+      - apache2
+
+  - name: "nginx"
+    comm:
+      - nginx
+
+  - name: "mysql"
+    comm:
+      - mysqld
+
+  - name: "postgres"
+    comm:
+      - postgres
+
+  - name: "redis"
+    comm:
+      - redis-server
+
+  - name: "docker-runtime"
+    comm:
+      - dockerd
+      - containerd
+      - containerd-shim
+      - docker-proxy
+
+  - name: "ozzb2b-api"
+    cmdline:
+      - 'ozzb2b_api\.app|uvicorn'
+
+  - name: "ozzb2b-web"
+    cmdline:
+      - 'next-server|next start|/app/server\.js'
+
+  - name: "ozzb2b-scraper"
+    cmdline:
+      - 'celery.*ozzb2b_scraper'
+
+  - name: "ozzb2b-clickhouse"
+    cmdline:
+      - 'clickhouse-server'
+
+  - name: "ozzb2b-observability"
+    cmdline:
+      - 'prometheus|grafana|loki|promtail|alertmanager|cadvisor|node_exporter|process-exporter'
+
+  - name: "node-sites"
+    cmdline:
+      - 'node .*?/var/www/|npm .*?/var/www/|PM2'
+
+  - name: "certbot"
+    cmdline:
+      - 'certbot'
+
+  - name: "{{.Comm}}"
+    cmdline:
+      - '.+'
