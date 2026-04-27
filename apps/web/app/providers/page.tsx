@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { listProviders, searchProviders } from '@/lib/api';
-import type { ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/types';
+import { getCategoryTree, listProviders, searchProviders } from '@/lib/api';
+import type { CategoryTreeNode, ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/types';
 import { ProviderFilters } from '@/components/ProviderFilters';
 import { trCategory, trCity, trCountry } from '@/lib/ru';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
@@ -72,6 +72,7 @@ export default async function ProvidersPage({
     data = await listProviders(listParams);
   }
 
+  const categoryTree = await getCategoryTree().catch(() => []);
   const items: ProviderSummary[] = data?.items ?? [];
   const facets = data?.facets ?? null;
   const total = data?.total ?? 0;
@@ -128,6 +129,7 @@ export default async function ProvidersPage({
             currentCountries={effectiveCountries}
             currentCities={toList(params.city)}
             currentLegalForms={toList(params.legal_form)}
+            categoryTree={categoryTree as CategoryTreeNode[]}
             categories={facets?.categories ?? emptyFacet}
             countries={facets?.countries ?? emptyFacet}
             cities={facets?.cities ?? emptyFacet}

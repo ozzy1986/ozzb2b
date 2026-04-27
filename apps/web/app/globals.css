@@ -258,6 +258,48 @@ a:hover {
   color: var(--text-muted);
   font-size: 12px;
 }
+.filters .category-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.filters .category-parent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.filters .category-children {
+  margin-left: 24px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+}
+.filters .filter-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 14px;
+}
+.filters .filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.filters .filter-actions button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.filters .filter-actions button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 /* Listing */
 .listing-head {
