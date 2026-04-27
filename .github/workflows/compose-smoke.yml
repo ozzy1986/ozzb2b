@@ -91,7 +91,7 @@ jobs:
         run: |
           set -e
           curl -sfI http://127.0.0.1:7700/health
-          curl -sfI http://127.0.0.1:8001/health
+          curl -sf http://127.0.0.1:8001/health >/dev/null
           # Matcher exposes health on its HTTP port (8090 inside → not mapped).
           docker exec ozzb2b-matcher wget -qO- http://127.0.0.1:8090/health >/dev/null
 
