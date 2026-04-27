@@ -64,6 +64,7 @@ scrape_configs:
   # Host process groups from /proc. Used by alert annotations to show which
   # workload family was consuming CPU during a host-level spike.
   - job_name: process-exporter
+    scrape_interval: 60s
     static_configs:
       - targets: ["process_exporter:9256"]
         labels:

@@ -125,16 +125,25 @@ groups:
           description: "{{ $labels.mountpoint }} on {{ $labels.instance }} is above 95% full."
 
       - alert: HostActiveSwapIO
-        expr: rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m]) > 20
-        for: 10m
+        expr: |
+          (
+            rate(node_vmstat_pswpin{job="host"}[5m]) + rate(node_vmstat_pswpout{job="host"}[5m]) > 150
+          )
+          and on(instance)
+          (
+            100 * avg by (instance) (rate(node_cpu_seconds_total{job="host",mode="iowait"}[5m])) > 10
+            or
+            node_load1{job="host"} / scalar(count(count by (cpu) (node_cpu_seconds_total{job="host",mode="idle"}))) > 2
+          )
+        for: 15m
         labels:
           severity: warning
         annotations:
-          summary: "Host has active swap I/O for 10m"
-          description: "The VPS is actively reading/writing swap for 10 minutes. This is more important than swap usage alone and usually means memory pressure or disk contention."
+          summary: "Host has heavy swap I/O with load or iowait"
+          description: "The VPS has sustained swap activity together with iowait or high load. This filters harmless stale swap reads and alerts only when the server is likely degraded."
           diagnostics: |-
             Swap I/O pages/s: {{ printf "%.1f" $value }}
-            RAM used: {{ with query "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)" }}{{ range . }}{{ printf "%.1f" .Value }}{{ end }}{{ else }}n/a{{ end }}%; swap used: {{ with query "100 * (1 - node_memory_SwapFree_bytes / clamp_min(node_memory_SwapTotal_bytes, 1))" }}{{ range . }}{{ printf "%.1f" .Value }}{{ end }}{{ else }}n/a{{ end }}%
+            RAM used: {{ with query "100 * (1 - node_memory_MemAvailable_bytes{job=\"host\"} / node_memory_MemTotal_bytes{job=\"host\"})" }}{{ range . }}{{ printf "%.1f" .Value }}{{ end }}{{ else }}n/a{{ end }}%; swap used: {{ with query "100 * (1 - node_memory_SwapFree_bytes{job=\"host\"} / clamp_min(node_memory_SwapTotal_bytes{job=\"host\"}, 1))" }}{{ range . }}{{ printf "%.1f" .Value }}{{ end }}{{ else }}n/a{{ end }}%; iowait: {{ with query "100 * avg(rate(node_cpu_seconds_total{job=\"host\",mode=\"iowait\"}[5m]))" }}{{ range . }}{{ printf "%.1f" .Value }}{{ end }}{{ else }}n/a{{ end }}%; load1/core: {{ with query "node_load1{job=\"host\"} / scalar(count(count by (cpu) (node_cpu_seconds_total{job=\"host\",mode=\"idle\"})))" }}{{ range . }}{{ printf "%.2f" .Value }}{{ end }}{{ else }}n/a{{ end }}
             Top process groups by resident memory:
             {{ range query "topk(8, sum by (groupname) (namedprocess_namegroup_memory_bytes{memtype=\"resident\"}))" }}- {{ .Labels.groupname }}: {{ humanize1024 .Value }}B
             {{ else }}- process-exporter data unavailable
