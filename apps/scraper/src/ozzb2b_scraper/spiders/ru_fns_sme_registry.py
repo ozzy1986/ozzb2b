@@ -16,8 +16,8 @@ from collections.abc import AsyncIterator, Iterable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from xml.etree import ElementTree
 
+from defusedxml import ElementTree
 from ozzb2b_scraper.config import get_settings
 from ozzb2b_scraper.models import ScrapedProvider
 from ozzb2b_scraper.spiders.base import Spider, SpiderContext
@@ -198,7 +198,8 @@ def parse_document(document: ElementTree.Element) -> FnsSmeRecord | None:
         registration_number = org.attrib["ОГРН"]
         is_ip = False
     else:
-        assert ip is not None
+        if ip is None:
+            return None
         display_name = _full_name_from_ip(ip)
         legal_name = display_name
         tax_id = ip.attrib["ИННФЛ"]

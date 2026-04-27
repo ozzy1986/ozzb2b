@@ -120,7 +120,8 @@ def _prepare_fns_sme(input_path: Path, output_dir: Path, limit: int, batch_size:
                 current = (output_dir / f"batch-{batch_no:04d}.jsonl").open(
                     "w", encoding="utf-8"
                 )
-            assert current is not None
+            if current is None:
+                raise RuntimeError("FNS SME batch output file was not opened")
             current.write(json.dumps(asdict(record), ensure_ascii=False) + "\n")
             written += 1
     finally:
