@@ -128,6 +128,26 @@ async def _find_existing_by_domain(
     )
 
 
+async def _find_existing_by_public_id(
+    conn: asyncpg.Connection, tax_id: str | None, registration_number: str | None
+) -> asyncpg.Record | None:
+    """Match official registry records by strong public identifiers."""
+
+    if tax_id:
+        row = await conn.fetchrow(
+            "SELECT id, slug FROM providers WHERE tax_id = $1 LIMIT 1",
+            tax_id,
+        )
+        if row is not None:
+            return row
+    if registration_number:
+        return await conn.fetchrow(
+            "SELECT id, slug FROM providers WHERE registration_number = $1 LIMIT 1",
+            registration_number,
+        )
+    return None
+
+
 async def _find_existing_by_fuzzy(
     conn: asyncpg.Connection, display_name: str, country_id: int | None
 ) -> asyncpg.Record | None:
@@ -180,11 +200,23 @@ async def _upsert_one(conn: asyncpg.Connection, item: ScrapedProvider) -> tuple[
     existing = await _find_existing_by_source(conn, item.source, item.source_id)
     action = "updated"
     if existing is None:
+        by_public_id = await _find_existing_by_public_id(
+            conn,
+            item.tax_id,
+            item.registration_number,
+        )
+        if by_public_id is not None:
+            existing = by_public_id
+            action = "merged_by_domain"
+    if existing is None:
         by_domain = await _find_existing_by_domain(conn, item.website)
         if by_domain is not None:
             existing = by_domain
             action = "merged_by_domain"
-    if existing is None:
+    # Official registries with INN/OGRN should not fuzzy-merge into unrelated
+    # similarly named companies; the indexed identifiers are the authority.
+    has_public_id = bool(item.tax_id or item.registration_number)
+    if existing is None and not has_public_id:
         fuzzy = await _find_existing_by_fuzzy(conn, item.display_name, country_id)
         if fuzzy and float(fuzzy["score"]) >= FUZZY_THRESHOLD:
             existing = fuzzy
