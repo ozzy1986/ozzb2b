@@ -21,6 +21,36 @@ type Props = {
 
 type LocationOption = { value: string; label: string };
 
+function switchKeyboardLayout(value: string): string {
+  const en = "`qwertyuiop[]asdfghjkl;'zxcvbnm,./";
+  const ru = "ёйцукенгшщзхъфывапролджэячсмитьбю.";
+  const toRu = new Map<string, string>();
+  const toEn = new Map<string, string>();
+  for (let i = 0; i < en.length; i += 1) {
+    toRu.set(en[i], ru[i]);
+    toEn.set(ru[i], en[i]);
+  }
+  let hasRu = false;
+  let hasEn = false;
+  for (const ch of value.toLowerCase()) {
+    if (toEn.has(ch)) hasRu = true;
+    if (toRu.has(ch)) hasEn = true;
+  }
+  const map = hasRu && !hasEn ? toEn : toRu;
+  return value
+    .toLowerCase()
+    .split('')
+    .map((ch) => map.get(ch) ?? ch)
+    .join('');
+}
+
+function queryVariants(raw: string): string[] {
+  const base = raw.trim().toLowerCase();
+  if (!base) return [];
+  const switched = switchKeyboardLayout(base);
+  return switched !== base ? [base, switched] : [base];
+}
+
 function uniqueOptions(options: LocationOption[]): LocationOption[] {
   const seen = new Set<string>();
   const out: LocationOption[] = [];
@@ -69,6 +99,12 @@ export function ProviderFilters(props: Props) {
     [props.countries],
   );
 
+  const countryOptionsWithCurrent = useMemo(() => {
+    if (!activeCountry) return countryOptions;
+    if (countryOptions.some((option) => option.value === activeCountry)) return countryOptions;
+    return [{ value: activeCountry, label: activeCountry }, ...countryOptions];
+  }, [activeCountry, countryOptions]);
+
   const cityOptions = useMemo(
     () => uniqueOptions([
       ...citySuggestions,
@@ -81,14 +117,19 @@ export function ProviderFilters(props: Props) {
   );
 
   useEffect(() => {
-    const normalized = cityQuery.trim();
+    const normalized = cityQuery.trim().toLowerCase();
     if (normalized.length < 2) {
       setCitySuggestions([]);
       return;
     }
     const timer = window.setTimeout(() => {
-      void getCities({ country: activeCountry, q: normalized, limit: 20 })
-        .then((cities) => setCitySuggestions(cities.map(cityToOption)))
+      const variants = queryVariants(normalized);
+      void Promise.all(
+        variants.map((variant) =>
+          getCities({ country: activeCountry, q: variant, limit: 20 }).catch(() => []),
+        ),
+      )
+        .then((batches) => setCitySuggestions(uniqueOptions(batches.flat().map(cityToOption))))
         .catch(() => setCitySuggestions([]));
     }, 200);
     return () => window.clearTimeout(timer);
@@ -133,10 +174,28 @@ export function ProviderFilters(props: Props) {
         setSingle(param, null);
         return;
       }
-      const match = options.find(
-        (option) =>
-          option.label.toLowerCase() === normalized || option.value.toLowerCase() === normalized,
-      );
+      const variants = queryVariants(normalized);
+      const match =
+        options.find((option) =>
+          variants.some(
+            (variant) =>
+              option.label.toLowerCase() === variant || option.value.toLowerCase() === variant,
+          ),
+        ) ||
+        options.find((option) =>
+          variants.some(
+            (variant) =>
+              option.label.toLowerCase().startsWith(variant) ||
+              option.value.toLowerCase().startsWith(variant),
+          ),
+        ) ||
+        options.find((option) =>
+          variants.some(
+            (variant) =>
+              option.label.toLowerCase().includes(variant) ||
+              option.value.toLowerCase().includes(variant),
+          ),
+        );
       if (match) setSingle(param, match.value);
     },
     [setSingle],
@@ -209,19 +268,22 @@ export function ProviderFilters(props: Props) {
 
       <div className="filter-group">
         <h4>Страна</h4>
-        <input
+        <select
           className="filter-select"
-          list="country-filter-options"
-          placeholder="Начните вводить страну..."
-          value={countryQuery}
-          onChange={(e) => setCountryQuery(e.target.value)}
-          onBlur={(e) => applyAutocomplete('country', e.target.value, countryOptions)}
-        />
-        <datalist id="country-filter-options">
-          {countryOptions.map((option) => (
-            <option key={option.value} value={option.label} />
+          value={activeCountry ?? ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            setCountryQuery(value);
+            setSingle('country', value || null);
+          }}
+        >
+          <option value="">Все страны</option>
+          {countryOptionsWithCurrent.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
           ))}
-        </datalist>
+        </select>
         <div className="filter-actions">
           <button
             type="button"

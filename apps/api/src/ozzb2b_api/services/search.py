@@ -98,6 +98,26 @@ def _escape_meili_value(value: str) -> str:
     return value.replace("'", "''")
 
 
+def _switch_keyboard_layout(value: str) -> str:
+    en = "`qwertyuiop[]asdfghjkl;'zxcvbnm,./"
+    ru = "ёйцукенгшщзхъфывапролджэячсмитьбю."
+    to_ru = {en[i]: ru[i] for i in range(len(en))}
+    to_en = {ru[i]: en[i] for i in range(len(ru))}
+    lower = value.lower()
+    has_ru = any(ch in to_en for ch in lower)
+    has_en = any(ch in to_ru for ch in lower)
+    mapping = to_en if has_ru and not has_en else to_ru
+    return "".join(mapping.get(ch, ch) for ch in lower)
+
+
+def _query_variants(value: str) -> list[str]:
+    base = value.strip().lower()
+    if not base:
+        return []
+    switched = _switch_keyboard_layout(base)
+    return [base, switched] if switched != base else [base]
+
+
 def _meili_filter_expression(q: SearchQuery) -> list[str]:
     parts: list[str] = ["status = 'published'"]
 
@@ -130,10 +150,15 @@ class MeilisearchGateway(SearchGateway):
         # The official Meilisearch SDK uses requests under the hood, which is
         # synchronous. Calling it from an async route would block the event
         # loop and tank concurrent throughput, so we hop to a worker thread.
-        def _call() -> dict[str, Any]:
-            return index.search(q.q, params)
+        variants = _query_variants(q.q) or [q.q]
+        response: dict[str, Any] = {"hits": [], "estimatedTotalHits": 0}
+        for variant in variants:
+            def _call(v: str = variant) -> dict[str, Any]:
+                return index.search(v, params)
 
-        response = await anyio.to_thread.run_sync(_call)
+            response = await anyio.to_thread.run_sync(_call)
+            if response.get("hits"):
+                break
         hits_raw = response.get("hits", [])
         total = response.get("estimatedTotalHits", response.get("totalHits", len(hits_raw)))
         hits = [
@@ -206,10 +231,15 @@ async def suggest(q: SearchQuery) -> list[SearchSuggestion]:
         "cropLength": 18,
     }
 
-    def _call() -> dict[str, Any]:
-        return index.search(text, params)
+    variants = _query_variants(text) or [text]
+    response: dict[str, Any] = {"hits": []}
+    for variant in variants:
+        def _call(v: str = variant) -> dict[str, Any]:
+            return index.search(v, params)
 
-    response = await anyio.to_thread.run_sync(_call)
+        response = await anyio.to_thread.run_sync(_call)
+        if response.get("hits"):
+            break
     suggestions: list[SearchSuggestion] = []
     for hit in response.get("hits", []):
         slug = str(hit.get("slug") or "")
