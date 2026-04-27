@@ -174,7 +174,7 @@ async def list_cities_endpoint(
         return [CityPublic.model_validate(c) for c in rows]
 
     return await get_or_set(
-        f"ref:cities:v2:{country or '*'}:{q or '*'}:{limit}",
+        f"ref:cities:v3:{country or '*'}:{q or '*'}:{limit}",
         ttl_seconds=_REFERENCE_TTL_SECONDS,
         loader=_load,
         encode=lambda items: [c.model_dump(mode="json") for c in items],
