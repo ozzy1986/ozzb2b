@@ -27,6 +27,18 @@ class SearchResponse(BaseModel):
     items: list[ProviderSummary]
 
 
+class SearchSuggestionPublic(BaseModel):
+    slug: str
+    display_name: str
+    description: str | None = None
+    city_name: str | None = None
+    country_code: str | None = None
+
+
+class SearchSuggestResponse(BaseModel):
+    items: list[SearchSuggestionPublic]
+
+
 @router.get("/search", response_model=SearchResponse)
 async def search_endpoint(
     db: DbSession,
@@ -94,4 +106,37 @@ async def search_endpoint(
         offset=offset,
         engine=result.engine,
         items=[to_summary(p) for p in ordered_providers],
+    )
+
+
+@router.get("/search/suggest", response_model=SearchSuggestResponse)
+async def search_suggest_endpoint(
+    request: Request,
+    response: Response,
+    q: Annotated[str, Query(min_length=2, max_length=120)],
+    categories: Annotated[list[str] | None, Query(alias="category")] = None,
+    countries: Annotated[list[str] | None, Query(alias="country")] = None,
+    cities: Annotated[list[str] | None, Query(alias="city")] = None,
+    legal_forms: Annotated[list[str] | None, Query(alias="legal_form")] = None,
+    limit: Annotated[int, Query(ge=1, le=10)] = 6,
+) -> SearchSuggestResponse:
+    cfg = get_settings()
+    await enforce_rate_limit(
+        request=request,
+        response=response,
+        endpoint="search-suggest",
+        limit=cfg.rate_limit_search_max,
+    )
+    query = search_service.SearchQuery(
+        q=q,
+        category_slugs=tuple(categories or ()),
+        country_codes=tuple(countries or ()),
+        city_slugs=tuple(cities or ()),
+        legal_form_codes=tuple(legal_forms or ()),
+        limit=limit,
+        offset=0,
+    )
+    suggestions = await search_service.suggest(query)
+    return SearchSuggestResponse(
+        items=[SearchSuggestionPublic(**s.__dict__) for s in suggestions]
     )

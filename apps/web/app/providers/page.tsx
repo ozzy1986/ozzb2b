@@ -7,6 +7,7 @@ import { trCategory, trCity, trCountry } from '@/lib/ru';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { FreshnessBadge } from '@/components/FreshnessBadge';
 import { primaryCategories } from '@/lib/categories';
+import { ProviderSearchBox } from '@/components/ProviderSearchBox';
 
 export const revalidate = 30;
 
@@ -52,27 +53,27 @@ export default async function ProvidersPage({
     facets: true,
   };
 
-  let data: ProviderListResponse | null = null;
-  let engineLabel = 'каталог';
-  if (q) {
-    try {
-      const search = await searchProviders({ ...listParams, q });
-      data = {
-        total: search.total,
-        limit: search.limit,
-        offset: search.offset,
-        items: search.items,
-        facets: null,
-      };
-      engineLabel = search.engine;
-    } catch {
-      data = await listProviders(listParams);
-    }
-  } else {
-    data = await listProviders(listParams);
-  }
-
-  const categoryTree = await getCategoryTree().catch(() => []);
+  const dataPromise = q
+    ? searchProviders({ ...listParams, q })
+        .then((search) => ({
+          data: {
+            total: search.total,
+            limit: search.limit,
+            offset: search.offset,
+            items: search.items,
+            facets: null,
+          } satisfies ProviderListResponse,
+          engineLabel: search.engine,
+        }))
+        .catch(async () => ({
+          data: await listProviders(listParams),
+          engineLabel: 'каталог',
+        }))
+    : listProviders(listParams).then((catalog) => ({ data: catalog, engineLabel: 'каталог' }));
+  const [{ data, engineLabel }, categoryTree] = await Promise.all([
+    dataPromise,
+    getCategoryTree().catch(() => []),
+  ]);
   const items: ProviderSummary[] = data?.items ?? [];
   const facets = data?.facets ?? null;
   const total = data?.total ?? 0;
@@ -106,11 +107,13 @@ export default async function ProvidersPage({
             ? `Результаты по запросу "${q}" — ${total} (${engineLabel})`
             : `${total} компаний`}
         </p>
-        <form className="search-form" action="/providers" method="get">
-          <input type="hidden" name="country" value="RU" />
-          <input name="q" defaultValue={q ?? ''} placeholder="Поиск компаний..." aria-label="Поиск" />
-          <button type="submit">Искать</button>
-        </form>
+        <ProviderSearchBox
+          currentQ={q}
+          countries={effectiveCountries}
+          categories={toList(params.category)}
+          cities={toList(params.city)}
+          legalForms={toList(params.legal_form)}
+        />
       </div>
 
       <div className="layout">

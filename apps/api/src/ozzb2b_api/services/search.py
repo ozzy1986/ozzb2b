@@ -68,6 +68,15 @@ class SearchResult:
     engine: str
 
 
+@dataclass(frozen=True)
+class SearchSuggestion:
+    slug: str
+    display_name: str
+    description: str | None
+    city_name: str | None
+    country_code: str | None
+
+
 class SearchGateway(ABC):
     @abstractmethod
     async def search(self, session: AsyncSession, q: SearchQuery) -> SearchResult:
@@ -174,6 +183,49 @@ async def search(session: AsyncSession, q: SearchQuery) -> SearchResult:
     except Exception as exc:  # pragma: no cover - fallback path
         log.warning("search.meilisearch_fail", err=str(exc))
         return await PostgresFtsGateway().search(session, q)
+
+
+async def suggest(q: SearchQuery) -> list[SearchSuggestion]:
+    """Return lightweight provider suggestions directly from Meilisearch."""
+    text = q.q.strip()
+    if not text:
+        return []
+    index = get_meilisearch().index(PROVIDERS_INDEX)
+    params = {
+        "limit": q.limit,
+        "offset": 0,
+        "filter": _meili_filter_expression(q),
+        "attributesToRetrieve": [
+            "slug",
+            "display_name",
+            "description",
+            "city_name",
+            "country_code",
+        ],
+        "attributesToCrop": ["description"],
+        "cropLength": 18,
+    }
+
+    def _call() -> dict[str, Any]:
+        return index.search(text, params)
+
+    response = await anyio.to_thread.run_sync(_call)
+    suggestions: list[SearchSuggestion] = []
+    for hit in response.get("hits", []):
+        slug = str(hit.get("slug") or "")
+        display_name = str(hit.get("display_name") or "")
+        if not slug or not display_name:
+            continue
+        suggestions.append(
+            SearchSuggestion(
+                slug=slug,
+                display_name=display_name,
+                description=hit.get("description"),
+                city_name=hit.get("city_name"),
+                country_code=hit.get("country_code"),
+            )
+        )
+    return suggestions
 
 
 async def maybe_rerank(

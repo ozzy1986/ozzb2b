@@ -113,3 +113,38 @@ def test_search_passes_filters_to_service(
     assert sent.country_codes == ("RU",)
     assert sent.city_slugs == ("moscow",)
     assert sent.legal_form_codes == ("OOO",)
+
+
+def test_search_suggest_returns_lightweight_items(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, Any] = {}
+
+    async def fake_suggest(q: search_service.SearchQuery) -> list[search_service.SearchSuggestion]:
+        seen["query"] = q
+        return [
+            search_service.SearchSuggestion(
+                slug="alpha",
+                display_name="Alpha",
+                description="Digital product studio",
+                city_name="Moscow",
+                country_code="RU",
+            )
+        ]
+
+    monkeypatch.setattr(search_service, "suggest", fake_suggest)
+
+    resp = client.get("/search/suggest", params={"q": "alp", "country": "RU"})
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["items"] == [
+        {
+            "slug": "alpha",
+            "display_name": "Alpha",
+            "description": "Digital product studio",
+            "city_name": "Moscow",
+            "country_code": "RU",
+        }
+    ]
+    assert seen["query"].q == "alp"
+    assert seen["query"].country_codes == ("RU",)

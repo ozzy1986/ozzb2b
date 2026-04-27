@@ -148,9 +148,13 @@ export async function getCountries(): Promise<Country[]> {
   return fetchPublic<Country[]>('/countries', { revalidate: 600 });
 }
 
-export async function getCities(country?: string): Promise<City[]> {
-  const qs = country ? `?country=${encodeURIComponent(country)}` : '';
-  return fetchPublic<City[]>(`/cities${qs}`, { revalidate: 600 });
+export async function getCities(opts: { country?: string; q?: string; limit?: number } = {}): Promise<City[]> {
+  const sp = new URLSearchParams();
+  if (opts.country) sp.set('country', opts.country);
+  if (opts.q) sp.set('q', opts.q);
+  if (opts.limit != null) sp.set('limit', String(opts.limit));
+  const qs = sp.toString();
+  return fetchPublic<City[]>(`/cities${qs ? `?${qs}` : ''}`, { revalidate: opts.q ? 0 : 600 });
 }
 
 export async function getLegalForms(country?: string): Promise<LegalForm[]> {
@@ -206,6 +210,27 @@ export async function searchProviders(params: ProviderListParams & { q: string }
     engine: string;
     items: import('./types').ProviderSummary[];
   }>(`/search${qs}`, { revalidate: 0 });
+}
+
+export type ProviderSuggestion = {
+  slug: string;
+  display_name: string;
+  description: string | null;
+  city_name: string | null;
+  country_code: string | null;
+};
+
+export async function suggestProviders(
+  params: Pick<ProviderListParams, 'categories' | 'countries' | 'cities' | 'legal_forms'> & {
+    q: string;
+    limit?: number;
+  },
+): Promise<ProviderSuggestion[]> {
+  const qs = buildQuery({ ...params, limit: params.limit ?? 6 });
+  const body = await fetchPublic<{ items: ProviderSuggestion[] }>(`/search/suggest${qs}`, {
+    revalidate: 0,
+  });
+  return body.items;
 }
 
 // ---- auth ----

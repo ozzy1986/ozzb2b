@@ -20,6 +20,13 @@ from ozzb2b_api.db.models import (
     ProviderStatus,
 )
 
+_FACET_LIMITS: dict[str, int | None] = {
+    "categories": None,
+    "countries": None,
+    "cities": 50,
+    "legal_forms": None,
+}
+
 
 @dataclass(frozen=True)
 class ProviderFilter:
@@ -102,10 +109,21 @@ async def list_countries(session: AsyncSession) -> list[Country]:
     return list((await session.execute(stmt)).scalars().all())
 
 
-async def list_cities(session: AsyncSession, country_code: str | None) -> list[City]:
+async def list_cities(
+    session: AsyncSession,
+    country_code: str | None,
+    *,
+    query: str | None = None,
+    limit: int = 50,
+) -> list[City]:
     stmt = select(City).order_by(City.name.asc())
     if country_code:
         stmt = stmt.join(Country).where(Country.code == country_code)
+    if query:
+        q = query.strip().lower()
+        if q:
+            stmt = stmt.where(func.lower(City.name).like(f"%{q}%"))
+    stmt = stmt.limit(limit)
     return list((await session.execute(stmt)).scalars().all())
 
 
@@ -169,6 +187,9 @@ async def _count_axis(
         )
     else:
         return []
+    limit = _FACET_LIMITS.get(axis)
+    if limit is not None:
+        stmt = stmt.limit(limit)
     rows = (await session.execute(stmt)).all()
     return [(str(r[0]), str(r[1]), int(r[2])) for r in rows]
 

@@ -1,8 +1,9 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
-import type { CategoryTreeNode, FacetValue } from '@/lib/types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getCities } from '@/lib/api';
+import type { CategoryTreeNode, City, FacetValue } from '@/lib/types';
 import { trCategory, trCity, trCountry, trLegalForm } from '@/lib/ru';
 
 type Props = {
@@ -18,12 +19,31 @@ type Props = {
   legalForms: FacetValue[];
 };
 
+type LocationOption = { value: string; label: string };
+
+function uniqueOptions(options: LocationOption[]): LocationOption[] {
+  const seen = new Set<string>();
+  const out: LocationOption[] = [];
+  for (const option of options) {
+    if (seen.has(option.value)) continue;
+    seen.add(option.value);
+    out.push(option);
+  }
+  return out;
+}
+
+function cityToOption(city: City): LocationOption {
+  return { value: city.slug, label: trCity(city.name) };
+}
+
 export function ProviderFilters(props: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [countryQuery, setCountryQuery] = useState('');
-  const [cityQuery, setCityQuery] = useState('');
+  const activeCountry = props.currentCountries[0];
+  const [countryQuery, setCountryQuery] = useState(activeCountry ?? '');
+  const [cityQuery, setCityQuery] = useState(props.currentCities[0] ?? '');
+  const [citySuggestions, setCitySuggestions] = useState<LocationOption[]>([]);
 
   const current = useMemo<Record<string, Set<string>>>(
     () => ({
@@ -50,13 +70,29 @@ export function ProviderFilters(props: Props) {
   );
 
   const cityOptions = useMemo(
-    () =>
-      props.cities.map((city) => ({
+    () => uniqueOptions([
+      ...citySuggestions,
+      ...props.cities.map((city) => ({
         value: city.value,
         label: trCity(city.label),
       })),
-    [props.cities],
+    ]),
+    [citySuggestions, props.cities],
   );
+
+  useEffect(() => {
+    const normalized = cityQuery.trim();
+    if (normalized.length < 2) {
+      setCitySuggestions([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void getCities({ country: activeCountry, q: normalized, limit: 20 })
+        .then((cities) => setCitySuggestions(cities.map(cityToOption)))
+        .catch(() => setCitySuggestions([]));
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [activeCountry, cityQuery]);
 
   const toggle = useCallback(
     (param: string, value: string) => {
@@ -83,6 +119,7 @@ export function ProviderFilters(props: Props) {
       const sp = new URLSearchParams(searchParams.toString());
       sp.delete(param);
       if (value) sp.append(param, value);
+      if (param === 'country') sp.delete('city');
       sp.delete('offset');
       router.push(`${pathname}?${sp.toString()}`);
     },

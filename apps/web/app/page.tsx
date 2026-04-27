@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getCategoryTree, listProviders } from '@/lib/api';
 import { trCategory, trCategoryDescription, trCity, trCountry } from '@/lib/ru';
 import { primaryCategories } from '@/lib/categories';
+import { ProviderSearchBox } from '@/components/ProviderSearchBox';
 
 export const revalidate = 60;
 
@@ -27,15 +28,7 @@ export default async function HomePage() {
           Каталог проверенных компаний: ИТ, бухгалтерия, юридические, маркетинговые и HR-услуги.
           Сравнивайте исполнителей и связывайтесь напрямую.
         </p>
-        <form className="search-form" action="/providers" method="get">
-          <input type="hidden" name="country" value="RU" />
-          <input
-            name="q"
-            placeholder="Поиск компаний, услуг, технологий..."
-            aria-label="Поиск компаний"
-          />
-          <button type="submit">Искать</button>
-        </form>
+        <ProviderSearchBox countries={['RU']} />
       </section>
 
       <div className="section-head">

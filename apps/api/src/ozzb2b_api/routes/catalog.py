@@ -166,13 +166,15 @@ async def list_countries_endpoint(db: DbSession) -> list[CountryPublic]:
 async def list_cities_endpoint(
     db: DbSession,
     country: Annotated[str | None, Query(description="ISO country code")] = None,
+    q: Annotated[str | None, Query(max_length=80, description="City name search")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[CityPublic]:
     async def _load() -> list[CityPublic]:
-        rows = await catalog_service.list_cities(db, country)
+        rows = await catalog_service.list_cities(db, country, query=q, limit=limit)
         return [CityPublic.model_validate(c) for c in rows]
 
     return await get_or_set(
-        f"ref:cities:v1:{country or '*'}",
+        f"ref:cities:v2:{country or '*'}:{q or '*'}:{limit}",
         ttl_seconds=_REFERENCE_TTL_SECONDS,
         loader=_load,
         encode=lambda items: [c.model_dump(mode="json") for c in items],

@@ -80,6 +80,10 @@
     "/search"
   ],
   [
+    "GET",
+    "/search/suggest"
+  ],
+  [
     "PATCH",
     "/providers/{slug}"
   ],
