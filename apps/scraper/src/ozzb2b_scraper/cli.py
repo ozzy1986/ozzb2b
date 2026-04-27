@@ -9,10 +9,14 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from dataclasses import asdict
+from pathlib import Path
 
 from ozzb2b_scraper.pipeline import IngestionStats, run_spider_sync
 from ozzb2b_scraper.spiders import ALL_SPIDERS, DemoDirectorySpider
+from ozzb2b_scraper.spiders.ru_fns_sme_registry import iter_records
 
 
 SPIDERS = {cls.source: cls for cls in ALL_SPIDERS}
@@ -51,6 +55,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Stop on first failed source instead of continuing.",
     )
 
+    prepare_fns = sub.add_parser(
+        "prepare-fns-sme",
+        help="Convert the official FNS SME XML/ZIP dump into import-ready JSONL batches.",
+    )
+    prepare_fns.add_argument("input_path", type=Path)
+    prepare_fns.add_argument("output_dir", type=Path)
+    prepare_fns.add_argument("--limit", type=int, default=10_000)
+    prepare_fns.add_argument("--batch-size", type=int, default=1_000)
+
     args = parser.parse_args(argv)
 
     if args.cmd == "list":
@@ -80,7 +93,42 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{cls.source}: {_format_stats(stats)}")
         return 1 if any_failure else 0
 
+    if args.cmd == "prepare-fns-sme":
+        return _prepare_fns_sme(args.input_path, args.output_dir, args.limit, args.batch_size)
+
     return 2
+
+
+def _prepare_fns_sme(input_path: Path, output_dir: Path, limit: int, batch_size: int) -> int:
+    if limit <= 0:
+        raise SystemExit("--limit must be positive")
+    if batch_size <= 0:
+        raise SystemExit("--batch-size must be positive")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written = 0
+    batch_no = 0
+    current = None
+    try:
+        for record in iter_records(input_path):
+            if written >= limit:
+                break
+            if written % batch_size == 0:
+                if current is not None:
+                    current.close()
+                batch_no += 1
+                current = (output_dir / f"batch-{batch_no:04d}.jsonl").open(
+                    "w", encoding="utf-8"
+                )
+            assert current is not None
+            current.write(json.dumps(asdict(record), ensure_ascii=False) + "\n")
+            written += 1
+    finally:
+        if current is not None:
+            current.close()
+
+    print(f"prepared={written} batches={batch_no} output_dir={output_dir}")
+    return 0
 
 
 if __name__ == "__main__":

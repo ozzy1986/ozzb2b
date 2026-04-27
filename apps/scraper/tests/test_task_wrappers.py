@@ -16,6 +16,7 @@ from ozzb2b_scraper import tasks as tasks_module
 from ozzb2b_scraper.spiders import (
     DemoDirectorySpider,
     RuBusinessServicesSeedSpider,
+    RuFnsSmeRegistrySpider,
     RuOutsourcingSeedSpider,
     RuRegionalItSeedSpider,
 )
@@ -47,6 +48,7 @@ def test_list_sources_hides_demo(monkeypatch: pytest.MonkeyPatch) -> None:
         RuBusinessServicesSeedSpider,
         RuOutsourcingSeedSpider,
         RuRegionalItSeedSpider,
+        RuFnsSmeRegistrySpider,
     ):
         assert cls.source in out["sources"]
 
@@ -94,4 +96,5 @@ def test_crawl_all_skips_demo_and_aggregates(
         RuOutsourcingSeedSpider.source,
         RuBusinessServicesSeedSpider.source,
         RuRegionalItSeedSpider.source,
+        RuFnsSmeRegistrySpider.source,
     }

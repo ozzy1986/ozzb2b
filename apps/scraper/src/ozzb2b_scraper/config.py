@@ -48,6 +48,10 @@ class Settings(BaseSettings):
             "Default is fail-open to keep crawling resilient."
         ),
     )
+    fns_sme_data_path: str | None = Field(
+        default=None,
+        description="Local path to an official FNS SME registry XML/ZIP dump or prepared JSONL.",
+    )
 
 
 @lru_cache(maxsize=1)

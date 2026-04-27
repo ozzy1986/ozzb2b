@@ -7,6 +7,7 @@ the scraper independently deployable. Instead we emit raw SQL via asyncpg.
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -229,7 +230,7 @@ async def _upsert_one(conn: asyncpg.Connection, item: ScrapedProvider) -> tuple[
             item.source,
             item.source_id,
             item.source_url,
-            '{}',
+            json.dumps(item.meta, ensure_ascii=False),
         )
         await _link_categories(conn, pid, item.category_slugs)
         return "inserted", pid
@@ -255,6 +256,10 @@ async def _upsert_one(conn: asyncpg.Connection, item: ScrapedProvider) -> tuple[
             source       = COALESCE(source, $16),
             source_id    = COALESCE(source_id, $17),
             source_url   = COALESCE(source_url, $18),
+            meta         = CASE
+                              WHEN $19::jsonb = '{}'::jsonb THEN meta
+                              ELSE COALESCE(meta, '{}'::jsonb) || $19::jsonb
+                           END,
             last_scraped_at = now(),
             updated_at   = now()
         WHERE id = $1
@@ -277,6 +282,7 @@ async def _upsert_one(conn: asyncpg.Connection, item: ScrapedProvider) -> tuple[
         item.source,
         item.source_id,
         item.source_url or "",
+        json.dumps(item.meta, ensure_ascii=False),
     )
     await _link_categories(conn, pid, item.category_slugs)
     return action, pid
