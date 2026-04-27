@@ -27,6 +27,24 @@ _FACET_LIMITS: dict[str, int | None] = {
     "legal_forms": None,
 }
 
+_CITY_SEARCH_ALIASES: tuple[tuple[str, str], ...] = (
+    ("москва", "moscow"),
+    ("санкт-петербург", "saint petersburg"),
+    ("петербург", "saint petersburg"),
+    ("новосибирск", "novosibirsk"),
+    ("екатеринбург", "yekaterinburg"),
+    ("казань", "kazan"),
+    ("нижний новгород", "nizhny novgorod"),
+    ("самара", "samara"),
+    ("ульяновск", "ulyanovsk"),
+    ("воронеж", "voronezh"),
+    ("омск", "omsk"),
+    ("киров", "kirov"),
+    ("пермь", "perm"),
+    ("ростов-на-дону", "rostov-on-don"),
+    ("краснодар", "krasnodar"),
+)
+
 
 @dataclass(frozen=True)
 class ProviderFilter:
@@ -122,7 +140,13 @@ async def list_cities(
     if query:
         q = query.strip().lower()
         if q:
-            stmt = stmt.where(func.lower(City.name).like(f"%{q}%"))
+            city_conditions = [func.lower(City.name).like(f"%{q}%")]
+            city_conditions.extend(
+                func.lower(City.name).like(f"%{en}%")
+                for ru, en in _CITY_SEARCH_ALIASES
+                if ru.startswith(q) or q in ru
+            )
+            stmt = stmt.where(or_(*city_conditions))
     stmt = stmt.limit(limit)
     return list((await session.execute(stmt)).scalars().all())
 
