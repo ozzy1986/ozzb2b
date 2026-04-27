@@ -9,6 +9,7 @@ import { ContactProviderButton } from '@/components/ContactProviderButton';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { FreshnessBadge } from '@/components/FreshnessBadge';
 import { ClaimProviderButton } from '@/components/ClaimProviderButton';
+import { primaryCategories, subcategories } from '@/lib/categories';
 
 export const revalidate = 60;
 
@@ -62,14 +63,17 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
     notFound();
   }
   const jsonLd = buildJsonLd(p);
+  const mainCategories = primaryCategories(p.categories);
+  const specialties = subcategories(p.categories);
+  const breadcrumbCategory = mainCategories[0] ?? p.categories[0];
   const crumbs: Crumb[] = [
     { label: 'Главная', href: '/' },
     { label: 'Компании', href: '/providers?country=RU' },
-    ...(p.categories[0]
+    ...(breadcrumbCategory
       ? [
           {
-            label: trCategory(p.categories[0].slug, p.categories[0].name),
-            href: `/providers?country=RU&category=${p.categories[0].slug}`,
+            label: trCategory(breadcrumbCategory.slug, breadcrumbCategory.name),
+            href: `/providers?country=RU&category=${breadcrumbCategory.slug}`,
           },
         ]
       : []),
@@ -113,14 +117,26 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
             <p>{p.description ?? 'Описание пока не добавлено.'}</p>
           </section>
           <section>
-            <h2>Услуги</h2>
+            <h2>Основные направления</h2>
             <div className="chips">
-              {p.categories.map((c) => (
+              {mainCategories.map((c) => (
                 <Link key={c.id} href={`/providers?country=RU&category=${c.slug}`} className="chip">
                   {trCategory(c.slug, c.name)}
                 </Link>
               ))}
             </div>
+            {specialties.length > 0 ? (
+              <>
+                <h3>Специализации</h3>
+                <div className="chips">
+                  {specialties.map((c) => (
+                    <Link key={c.id} href={`/providers?country=RU&category=${c.slug}`} className="chip">
+                      {trCategory(c.slug, c.name)}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </section>
         </div>
 

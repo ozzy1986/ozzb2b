@@ -6,6 +6,7 @@ import { ProviderFilters } from '@/components/ProviderFilters';
 import { trCategory, trCity, trCountry } from '@/lib/ru';
 import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { FreshnessBadge } from '@/components/FreshnessBadge';
+import { primaryCategories } from '@/lib/categories';
 
 export const revalidate = 30;
 
@@ -148,15 +149,17 @@ export default async function ProvidersPage({
                   <h3>{p.display_name}</h3>
                   {p.description ? <p>{p.description}</p> : null}
                   <div className="meta">
+                    {primaryCategories(p.categories)
+                      .slice(0, 3)
+                      .map((c) => (
+                        <span key={c.id} className="chip">
+                          {trCategory(c.slug, c.name)}
+                        </span>
+                      ))}
                     {p.country ? (
                       <span className="chip">{trCountry(p.country.code, p.country.name)}</span>
                     ) : null}
                     {p.city ? <span className="chip">{trCity(p.city.name)}</span> : null}
-                    {p.categories.slice(0, 3).map((c) => (
-                      <span key={c.id} className="chip">
-                        {trCategory(c.slug, c.name)}
-                      </span>
-                    ))}
                     <FreshnessBadge lastScrapedAt={p.last_scraped_at} />
                   </div>
                 </Link>

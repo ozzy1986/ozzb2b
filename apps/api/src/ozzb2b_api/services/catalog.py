@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from ozzb2b_api.db.models import (
     Category,
@@ -155,12 +155,17 @@ async def _count_axis(
             .order_by(func.count(filtered.c.id).desc(), LegalForm.name.asc())
         )
     elif axis == "categories":
+        parent = aliased(Category)
+        effective_slug = func.coalesce(parent.slug, Category.slug)
+        effective_name = func.coalesce(parent.name, Category.name)
         stmt = (
-            select(Category.slug, Category.name, func.count(func.distinct(filtered.c.id)))
-            .join(ProviderCategory, ProviderCategory.category_id == Category.id)
-            .join(filtered, filtered.c.id == ProviderCategory.provider_id)
-            .group_by(Category.slug, Category.name)
-            .order_by(func.count(func.distinct(filtered.c.id)).desc(), Category.name.asc())
+            select(effective_slug, effective_name, func.count(func.distinct(filtered.c.id)))
+            .select_from(filtered)
+            .join(ProviderCategory, ProviderCategory.provider_id == filtered.c.id)
+            .join(Category, Category.id == ProviderCategory.category_id)
+            .join(parent, parent.id == Category.parent_id, isouter=True)
+            .group_by(effective_slug, effective_name)
+            .order_by(func.count(func.distinct(filtered.c.id)).desc(), effective_name.asc())
         )
     else:
         return []

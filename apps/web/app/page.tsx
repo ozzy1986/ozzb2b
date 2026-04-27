@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCategoryTree, listProviders } from '@/lib/api';
 import { trCategory, trCategoryDescription, trCity, trCountry } from '@/lib/ru';
+import { primaryCategories } from '@/lib/categories';
 
 export const revalidate = 60;
 
@@ -76,15 +77,17 @@ export default async function HomePage() {
               <h3>{p.display_name}</h3>
               {p.description ? <p>{p.description}</p> : null}
               <div className="meta">
+                {primaryCategories(p.categories)
+                  .slice(0, 2)
+                  .map((c) => (
+                    <span key={c.id} className="chip">
+                      {trCategory(c.slug, c.name)}
+                    </span>
+                  ))}
                 {p.country ? (
                   <span className="chip">{trCountry(p.country.code, p.country.name)}</span>
                 ) : null}
                 {p.city ? <span className="chip">{trCity(p.city.name)}</span> : null}
-                {p.categories.slice(0, 3).map((c) => (
-                  <span key={c.id} className="chip">
-                    {trCategory(c.slug, c.name)}
-                  </span>
-                ))}
               </div>
             </Link>
           ))}

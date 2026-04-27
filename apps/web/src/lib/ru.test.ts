@@ -10,7 +10,7 @@ import {
 
 describe('translations', () => {
   it('translates known categories and falls back for unknown', () => {
-    expect(trCategory('it', 'IT')).toBe('ИТ');
+    expect(trCategory('it', 'IT')).toBe('ИТ и разработка');
     expect(trCategory('unknown', 'Other')).toBe('Other');
   });
 
