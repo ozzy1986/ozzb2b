@@ -10,7 +10,7 @@ name = "ozzb2b-matcher"
 path = "src/main.rs"
 
 [dependencies]
-tokio = { version = "1.41", features = [
+tokio = { version = "1.52", features = [
     "rt-multi-thread",
     "macros",
     "signal",
@@ -39,7 +39,7 @@ prometheus = { version = "0.13", default-features = false }
 tonic-build = { version = "0.13", default-features = false, features = ["prost"] }
 
 [dev-dependencies]
-tokio = { version = "1.41", features = [
+tokio = { version = "1.52", features = [
     "rt-multi-thread",
     "macros",
     "net",
