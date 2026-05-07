@@ -130,6 +130,11 @@ ignore = ["S101", "S105", "S106", "N811"]
 # TYPE_CHECKING-guarded imports used to break circular dependencies.
 "src/ozzb2b_api/db/models/*.py" = ["UP037"]
 "src/ozzb2b_api/schemas/*.py" = ["UP037"]
+# Analytics queries interpolate only int-bounded values produced by
+# `_window_clause` and explicit `max(1, min(limit, N))` guards (see inline
+# `# nosec B608` notes); no user-controlled string ever reaches the SQL.
+# Bandit (security audit) re-checks this via `# nosec` comments.
+"src/ozzb2b_api/services/analytics.py" = ["S608"]
 
 [tool.mypy]
 python_version = "3.12"

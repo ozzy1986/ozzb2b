@@ -14,7 +14,7 @@ from ozzb2b_api.db.base import Base
 from ozzb2b_api.db.models._mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     ADMIN = "admin"
     PROVIDER_OWNER = "provider_owner"
     CLIENT = "client"

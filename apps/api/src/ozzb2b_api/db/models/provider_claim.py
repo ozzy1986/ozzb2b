@@ -24,13 +24,13 @@ if TYPE_CHECKING:
     from ozzb2b_api.db.models.user import User
 
 
-class ClaimStatus(str, enum.Enum):
+class ClaimStatus(enum.StrEnum):
     PENDING = "pending"
     VERIFIED = "verified"
     REJECTED = "rejected"
 
 
-class ClaimMethod(str, enum.Enum):
+class ClaimMethod(enum.StrEnum):
     META_TAG = "meta_tag"
     ADMIN_MANUAL = "admin_manual"
 

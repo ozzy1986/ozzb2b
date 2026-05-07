@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from ozzb2b_api.db.models.user import User
 
 
-class ProviderStatus(str, enum.Enum):
+class ProviderStatus(enum.StrEnum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"

@@ -13,13 +13,10 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 import structlog
 
 from ozzb2b_api.clients.redis import get_redis
-
-T = TypeVar("T")
 
 log = structlog.get_logger("ozzb2b_api.clients.cache")
 
@@ -39,7 +36,7 @@ def _lock_for(key: str) -> asyncio.Lock:
     return lock
 
 
-async def get_or_set(
+async def get_or_set[T](
     key: str,
     *,
     ttl_seconds: int,
