@@ -197,13 +197,13 @@ fi
 log "run alembic migrations"
 bash deploy/vps_migrate.sh
 
-# Run the latest smoke suite so a regression in container start-up,
-# nginx routing or core flow trips the deploy here instead of being
-# noticed by users. Fall through if no phase smoke script exists yet.
-latest_smoke=$(ls deploy/vps_smoke_phase*.sh 2>/dev/null | sort -V | tail -n1 || true)
-if [ -n "${latest_smoke:-}" ] && [ -f "$latest_smoke" ]; then
-    log "post-deploy smoke: $latest_smoke"
-    if ! bash "$latest_smoke"; then
+# Phase 5.5/5.6 scripts use suffixes 55/56, so filename sorting cannot identify
+# the newest product phase reliably. Keep the core production smoke explicit;
+# callers can override it for a specialized verification run.
+post_deploy_smoke="${POST_DEPLOY_SMOKE:-deploy/vps_smoke_phase8.sh}"
+if [ -f "$post_deploy_smoke" ]; then
+    log "post-deploy smoke: $post_deploy_smoke"
+    if ! bash "$post_deploy_smoke"; then
         log "smoke failed; rolling back to previous git ref"
         git reset --hard HEAD@{1} || true
         docker compose "${compose_args[@]}" up -d --build
