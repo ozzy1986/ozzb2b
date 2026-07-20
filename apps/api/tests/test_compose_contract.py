@@ -24,6 +24,7 @@ yaml = pytest.importorskip("yaml")
 
 ROOT = Path(__file__).resolve().parents[3]
 COMPOSE_PATH = ROOT / "compose.prod.yml"
+DEPLOY_PATH = ROOT / "deploy" / "vps_apply_stack.sh"
 ALERTMANAGER_NOOP_PATH = ROOT / "infra" / "alertmanager" / "alertmanager.noop.yml"
 APACHE_CONFIG_DIR = ROOT / "infra" / "apache"
 
@@ -142,9 +143,15 @@ def test_alertmanager_has_secret_free_fallback_config() -> None:
 
 def test_grafana_admin_password_has_no_insecure_default() -> None:
     grafana = _load_compose()["services"]["grafana"]
-    password = grafana["environment"]["GF_SECURITY_ADMIN_PASSWORD"]
-    assert password.startswith("${OZZB2B_GRAFANA_ADMIN_PASSWORD:?")
-    assert "change_me" not in password
+    assert "GF_SECURITY_ADMIN_PASSWORD" not in grafana["environment"]
+    assert grafana["env_file"] == [".env.prod"]
+
+    deploy_script = DEPLOY_PATH.read_text(encoding="utf-8")
+    assert (
+        "GF_SECURITY_ADMIN_PASSWORD="
+        "${OZZB2B_GRAFANA_ADMIN_PASSWORD:?missing Grafana admin password}"
+    ) in deploy_script
+    assert "change_me_in_prod" not in deploy_script
 
 
 @pytest.mark.parametrize(
