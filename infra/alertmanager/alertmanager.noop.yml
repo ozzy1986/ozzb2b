@@ -1,0 +1,14 @@
+# Safe fallback used when Telegram credentials are not configured.
+# Alertmanager remains healthy and receives alerts, but sends no notifications.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: noop
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+
+receivers:
+  - name: noop

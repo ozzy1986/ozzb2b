@@ -45,7 +45,7 @@ async I/O, gRPC, pub/sub, streams, observability).
                             (HTTPS, Let's Encrypt)
                                         │
                                   ┌─────▼──────┐
-                                  │   nginx    │
+                                  │ host proxy │
                                   │ (reverse   │
                                   │  proxy)    │
                                   └─┬───┬───┬──┘
@@ -140,7 +140,7 @@ Request flow example — **sending a chat message**:
 | Analytics store | ClickHouse 24.11 |
 | Scraper | Python 3.12 (httpx, selectolax, tenacity), Celery + Redis broker, Celery Beat schedules |
 | Auth | JWT (HS256), Argon2id, refresh-token rotation, Redis fixed-window rate limiting |
-| Reverse proxy / TLS | Nginx + Let's Encrypt (certbot) |
+| Reverse proxy / TLS | Apache on the shared VPS (nginx-compatible configs retained) + Let's Encrypt |
 | Containerization | Docker + docker-compose (production profile) |
 | CI | GitHub Actions (lint + typecheck + test per service) |
 | Observability | Prometheus 2.54 + Grafana 11.3 + Loki 3 + Promtail + node_exporter + cAdvisor |
@@ -166,6 +166,7 @@ apps/
   scraper/      Python + Celery scraping worker
 proto/          Protobuf contracts (matcher, events, chat)
 infra/
+  apache/       Apache reverse-proxy vhosts used on the shared VPS
   nginx/        nginx vhosts
   prometheus/   Prometheus config + alert rules
   grafana/      provisioned dashboards + datasources
@@ -293,8 +294,12 @@ Extra CI gates:
 
 Single VPS, orchestrated by `compose.prod.yml`:
 
-- `deploy/vps_bootstrap.sh` — first-time nginx + SSL + compose bring-up.
+- `deploy/vps_bootstrap.sh` — first-time bootstrap for a dedicated nginx-edge VPS.
+- `deploy/vps_ozzb2b_ssl.sh` / `deploy/vps_grafana_ssl.sh` — Apache-compatible
+  certificate bootstrap used by the current shared VPS.
 - `deploy/vps_apply_stack.sh` — idempotent redeploy on git pull.
+- `scraper` + `scraper_beat` — independently restartable Celery worker and
+  exactly one scheduler for the daily source refreshes.
 - `deploy/vps_migrate.sh` — run Alembic migrations inside the API container.
 - `deploy/vps_smoke_phase*.sh` — end-to-end smoke tests.
 

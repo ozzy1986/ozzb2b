@@ -118,6 +118,14 @@ class Settings(BaseSettings):
 
     hsts_max_age_seconds: int = Field(default=15_552_000)
 
+    auth_cookie_domain: str | None = Field(
+        default=None,
+        description=(
+            "Optional shared parent domain for HttpOnly auth cookies. Production "
+            "defaults to .ozzb2b.com so both the web SSR host and API receive them."
+        ),
+    )
+
     jwt_secret: str = Field(default="please_change_me_in_every_env")
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_ttl_seconds: int = Field(default=15 * 60)
@@ -175,6 +183,12 @@ class Settings(BaseSettings):
     @property
     def is_test(self) -> bool:
         return self.env.lower() == "test"
+
+    @property
+    def resolved_auth_cookie_domain(self) -> str | None:
+        if self.auth_cookie_domain:
+            return self.auth_cookie_domain
+        return ".ozzb2b.com" if self.is_production else None
 
 
 @lru_cache(maxsize=1)

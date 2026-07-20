@@ -40,6 +40,8 @@ systemctl restart postgresql
 log "postgresql restarted"
 
 # Firewall: allow the docker bridges to reach 5432; external still blocked by default DROP.
+# Compose projects use br-* (often 172.18.0.0/16), not docker0. Interface-
+# scoped rules keep Postgres unreachable from non-Docker private networks.
 ufw allow in on docker0 to any port 5432 proto tcp || true
 for iface in $(ip -4 -br addr | awk '/^br-/{print $1}'); do
     ufw allow in on "$iface" to any port 5432 proto tcp || true

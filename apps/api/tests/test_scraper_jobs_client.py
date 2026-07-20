@@ -21,14 +21,20 @@ class _FakeAsyncResult:
 
 
 class _RecordingCelery:
-    last_task: tuple[str, list[Any]] | None = None
+    last_task: tuple[str, list[Any], str | None] | None = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Constructor args are ignored by the test double.
         pass
 
-    def send_task(self, name: str, args: list[Any]) -> _FakeAsyncResult:
-        type(self).last_task = (name, args)
+    def send_task(
+        self,
+        name: str,
+        args: list[Any],
+        *,
+        queue: str | None = None,
+    ) -> _FakeAsyncResult:
+        type(self).last_task = (name, args, queue)
         return _FakeAsyncResult("task-123")
 
 
@@ -42,7 +48,11 @@ async def test_enqueue_crawl_source_dispatches_correct_task() -> None:
     with patch.object(scraper_jobs, "Celery", _RecordingCelery):
         job = await scraper_jobs.enqueue_crawl_source("ru-it", 25)
     assert job.task_id == "task-123"
-    assert _RecordingCelery.last_task == ("ozzb2b.scraper.crawl_source", ["ru-it", 25])
+    assert _RecordingCelery.last_task == (
+        "ozzb2b.scraper.crawl_source",
+        ["ru-it", 25],
+        "scraper",
+    )
 
 
 @pytest.mark.asyncio
@@ -50,4 +60,8 @@ async def test_enqueue_crawl_all_dispatches_correct_task() -> None:
     with patch.object(scraper_jobs, "Celery", _RecordingCelery):
         job = await scraper_jobs.enqueue_crawl_all(None)
     assert job.task_id == "task-123"
-    assert _RecordingCelery.last_task == ("ozzb2b.scraper.crawl_all", [None])
+    assert _RecordingCelery.last_task == (
+        "ozzb2b.scraper.crawl_all",
+        [None],
+        "scraper",
+    )

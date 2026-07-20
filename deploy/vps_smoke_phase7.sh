@@ -41,8 +41,8 @@ if now_any:
 '
 
 log "5) Public site renders freshness label"
-if curl -sSf "https://ozzb2b.com/providers?country=RU" \
-     | grep -q "Обновлено"; then
+providers_page=$(curl -sSf "https://ozzb2b.com/providers?country=RU")
+if grep -q "Обновлено" <<<"$providers_page"; then
     echo "OK: freshness chip rendered on public listing"
 else
     echo "WARN: freshness chip not found on public listing (may just mean no fresh data yet)"

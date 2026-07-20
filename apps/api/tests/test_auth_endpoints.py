@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
+
+from ozzb2b_api.config import Settings
+from ozzb2b_api.routes import auth as auth_routes
 
 
 def _register(
@@ -23,6 +27,33 @@ def test_register_issues_tokens_and_sets_cookies(client: TestClient) -> None:
     assert body["user"]["role"] == "client"
     # TestClient exposes set-cookies via .cookies
     assert any(c for c in client.cookies.jar)
+
+
+def test_production_auth_cookies_are_shared_with_web_origin(
+    client: TestClient,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    production = settings.model_copy(
+        update={"env": "production", "auth_cookie_domain": ".ozzb2b.com"},
+    )
+    monkeypatch.setattr(auth_routes, "get_settings", lambda: production)
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "shared-cookie@example.com",
+            "password": "SuperSecret123!",
+            "display_name": "U",
+        },
+    )
+
+    assert response.status_code == 201
+    cookies = response.headers.get_list("set-cookie")
+    shared_cookies = [cookie for cookie in cookies if "Domain=.ozzb2b.com" in cookie]
+    assert len(shared_cookies) == 2
+    assert all("HttpOnly" in cookie and "Secure" in cookie for cookie in shared_cookies)
+    assert all("SameSite=lax" in cookie for cookie in shared_cookies)
 
 
 def test_register_rejects_duplicate_email(client: TestClient) -> None:

@@ -52,7 +52,7 @@ def settings(tmp_path: Path) -> Settings:
         redis_url="redis://127.0.0.1:6399/15",
         meilisearch_url="http://127.0.0.1:7799",
         rate_limit_enabled=False,
-        jwt_secret="unit-tests-secret-long-enough-for-hmac",
+        jwt_secret="unit-tests-secret-long-enough-for-hmac-sha256",
     )
 
 

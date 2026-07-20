@@ -36,6 +36,7 @@ _TRANSIENT_ERRORS = (
 _NON_RETRYABLE_ERRORS = (ResponseTooLarge,)
 
 REDIS_URL = os.environ.get("OZZB2B_REDIS_URL", "redis://localhost:6380/0")
+SCRAPER_QUEUE = "scraper"
 
 app = Celery(
     "ozzb2b_scraper",
@@ -47,6 +48,7 @@ app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
+    task_default_queue=SCRAPER_QUEUE,
     timezone="UTC",
     enable_utc=True,
     beat_schedule={
@@ -54,19 +56,16 @@ app.conf.update(
             "task": "ozzb2b.scraper.crawl_source",
             "schedule": crontab(minute=0, hour=2),
             "args": (RuOutsourcingSeedSpider.source,),
-            "options": {"queue": "scraper"},
         },
         "refresh-ru-business-services-daily": {
             "task": "ozzb2b.scraper.crawl_source",
             "schedule": crontab(minute=20, hour=2),
             "args": (RuBusinessServicesSeedSpider.source,),
-            "options": {"queue": "scraper"},
         },
         "refresh-ru-regional-it-daily": {
             "task": "ozzb2b.scraper.crawl_source",
             "schedule": crontab(minute=40, hour=2),
             "args": (RuRegionalItSeedSpider.source,),
-            "options": {"queue": "scraper"},
         },
     },
 )

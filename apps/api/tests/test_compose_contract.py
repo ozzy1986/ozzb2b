@@ -5,7 +5,7 @@ The VPS depends on compose.prod.yml behaving predictably:
   * every service that exposes a network port must advertise a healthcheck
     (so ``depends_on.condition: service_healthy`` is meaningful upstream);
   * host port bindings MUST be localhost-only — public traffic enters
-    exclusively through the nginx reverse proxy.
+    exclusively through the host reverse proxy (Apache or nginx).
 
 These tests ensure regressions in any of the above are caught in CI
 before a deploy accidentally opens a service to the public Internet or
@@ -24,13 +24,15 @@ yaml = pytest.importorskip("yaml")
 
 ROOT = Path(__file__).resolve().parents[3]
 COMPOSE_PATH = ROOT / "compose.prod.yml"
+ALERTMANAGER_NOOP_PATH = ROOT / "infra" / "alertmanager" / "alertmanager.noop.yml"
+APACHE_CONFIG_DIR = ROOT / "infra" / "apache"
 
 
 # Services that intentionally don't expose HTTP endpoints we can probe:
 # Celery workers don't run an HTTP server, so they can't have a standard
 # healthcheck. They have `restart: unless-stopped` so Docker still recovers
 # on crash.
-SERVICES_WITHOUT_HEALTHCHECK_OK = {"scraper"}
+SERVICES_WITHOUT_HEALTHCHECK_OK = {"scraper", "scraper_beat"}
 
 
 def _load_compose() -> dict:
@@ -90,7 +92,7 @@ def test_every_port_binding_is_localhost_only() -> None:
                 offenders.append(f"{name}: {port} binds to {m.group('host_ip')}")
     assert not offenders, (
         "Services must bind only to 127.0.0.1 — public traffic enters via "
-        "nginx. Offenders:\n  " + "\n  ".join(offenders)
+        "the host reverse proxy. Offenders:\n  " + "\n  ".join(offenders)
     )
 
 
@@ -105,6 +107,61 @@ def test_critical_services_depend_on_healthy_upstreams() -> None:
 
     api = compose["services"]["api"]
     assert api["depends_on"]["meilisearch"]["condition"] == "service_healthy"
+
+
+def test_scraper_has_exactly_one_beat_scheduler() -> None:
+    """Production must run one scheduler beside the independently scalable workers."""
+    services = _load_compose()["services"]
+    worker = services["scraper"]
+    beat = services["scraper_beat"]
+
+    worker_command = " ".join(worker["command"])
+    assert "--queues=scraper" in worker_command
+
+    assert beat["image"] == worker["image"]
+    assert beat["env_file"] == worker["env_file"]
+    assert beat["extra_hosts"] == worker["extra_hosts"]
+
+    command = " ".join(beat["command"])
+    assert " beat " in f" {command} "
+    assert " worker " not in f" {command} "
+    assert "--schedule=/tmp/celerybeat-schedule" in command
+    assert not beat.get("ports")
+
+
+def test_alertmanager_has_secret_free_fallback_config() -> None:
+    """Prometheus must not retain a permanently-down target without Telegram."""
+    with ALERTMANAGER_NOOP_PATH.open(encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file)
+
+    receiver = config["route"]["receiver"]
+    receivers = {item["name"]: item for item in config["receivers"]}
+    assert receiver in receivers
+    assert "telegram_configs" not in receivers[receiver]
+
+
+def test_grafana_admin_password_has_no_insecure_default() -> None:
+    grafana = _load_compose()["services"]["grafana"]
+    password = grafana["environment"]["GF_SECURITY_ADMIN_PASSWORD"]
+    assert password.startswith("${OZZB2B_GRAFANA_ADMIN_PASSWORD:?")
+    assert "change_me" not in password
+
+
+@pytest.mark.parametrize(
+    ("filename", "upstream"),
+    [
+        ("ozzb2b.com.conf", "http://127.0.0.1:3101/"),
+        ("api.ozzb2b.com.conf", "http://127.0.0.1:8001/"),
+        ("grafana.ozzb2b.com.conf", "http://127.0.0.1:3102/"),
+    ],
+)
+def test_apache_vhosts_proxy_public_services_to_loopback(
+    filename: str,
+    upstream: str,
+) -> None:
+    config = (APACHE_CONFIG_DIR / filename).read_text(encoding="utf-8")
+    assert f"ProxyPass / {upstream}" in config
+    assert "0.0.0.0" not in config
 
 
 def test_observability_stack_memory_limits_declared() -> None:

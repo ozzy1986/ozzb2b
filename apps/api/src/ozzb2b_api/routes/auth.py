@@ -80,10 +80,16 @@ def _set_auth_cookies(
 ) -> None:
     cfg = get_settings()
     secure = cfg.is_production
-    # In production the API (api.ozzb2b.com) is on a different origin from the
-    # browser (ozzb2b.com), so we need SameSite=None + Secure for the cookies
-    # to be sent with cross-site credentialed requests. In dev we use Lax.
-    samesite: Literal["lax", "none"] = "none" if cfg.is_production else "lax"
+    # The web and API have different origins but share the same schemeful site
+    # (ozzb2b.com). Lax therefore supports their credentialed requests while
+    # withholding cookies from cross-site POSTs as a CSRF barrier.
+    samesite: Literal["lax"] = "lax"
+    domain = cfg.resolved_auth_cookie_domain
+    if domain:
+        # Remove legacy host-only cookies before switching to the shared
+        # parent-domain scope; duplicate names can be parsed inconsistently.
+        response.delete_cookie(REFRESH_COOKIE, path="/auth")
+        response.delete_cookie(ACCESS_COOKIE, path="/")
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,
@@ -92,6 +98,7 @@ def _set_auth_cookies(
         samesite=samesite,
         expires=refresh_expires_at,
         path="/auth",
+        domain=domain,
     )
     response.set_cookie(
         ACCESS_COOKIE,
@@ -101,12 +108,16 @@ def _set_auth_cookies(
         samesite=samesite,
         expires=access_expires_at,
         path="/",
+        domain=domain,
     )
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    response.delete_cookie(REFRESH_COOKIE, path="/auth")
-    response.delete_cookie(ACCESS_COOKIE, path="/")
+    domain = get_settings().resolved_auth_cookie_domain
+    domains = [None, domain] if domain else [None]
+    for cookie_domain in domains:
+        response.delete_cookie(REFRESH_COOKIE, path="/auth", domain=cookie_domain)
+        response.delete_cookie(ACCESS_COOKIE, path="/", domain=cookie_domain)
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)

@@ -20,7 +20,17 @@ PASSWORD="test-password-${TS}"
 
 log() { printf "[phase8_smoke] %s\n" "$*"; }
 jar=$(mktemp)
-trap 'rm -f "$jar"' EXIT
+cleanup() {
+  rm -f "$jar" /tmp/phase8_reg.json /tmp/phase8_init.json \
+    /tmp/phase8_verify.json /tmp/phase8_me.json
+  if command -v psql >/dev/null 2>&1; then
+    printf '%s\n' "DELETE FROM users WHERE email = :'smoke_email';" \
+      | sudo -u postgres psql --dbname=ozzb2b --set=ON_ERROR_STOP=1 \
+          --set=smoke_email="$EMAIL" \
+          >/dev/null || log "WARN: failed to remove smoke user ${EMAIL}"
+  fi
+}
+trap cleanup EXIT
 
 log "0) Provider to test against: ${SLUG}"
 http_code=$(curl -sS -o /dev/null -w '%{http_code}' "${API}/providers/${SLUG}")

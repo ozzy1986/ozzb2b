@@ -24,6 +24,7 @@ class ScrapeJob:
 
 _TASK_CRAWL_SOURCE = "ozzb2b.scraper.crawl_source"
 _TASK_CRAWL_ALL = "ozzb2b.scraper.crawl_all"
+_SCRAPER_QUEUE = "scraper"
 
 
 def _build_client() -> Celery:
@@ -33,7 +34,7 @@ def _build_client() -> Celery:
 
 def _send_sync(name: str, args: list[Any]) -> ScrapeJob:
     client = _build_client()
-    result = client.send_task(name, args=args)
+    result = client.send_task(name, args=args, queue=_SCRAPER_QUEUE)
     return ScrapeJob(task_id=str(result.id))
 
 

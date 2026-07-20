@@ -16,6 +16,21 @@ test.describe('site smoke', () => {
     ).toBeVisible();
   });
 
+  test('live Russian catalog contains freshly scraped providers', async ({ page }) => {
+    test.skip(
+      process.env.E2E_EXPECT_LIVE_DATA !== '1',
+      'Live-data assertion is enabled only for post-deploy smoke runs',
+    );
+
+    const response = await page.goto('/providers?country=RU');
+    expect(response?.ok()).toBeTruthy();
+
+    const cards = page.locator('.grid-providers > .card');
+    await expect(cards.first()).toBeVisible();
+    expect(await cards.count()).toBeGreaterThan(0);
+    await expect(page.getByText(/Обновлено/).first()).toBeVisible();
+  });
+
   test('login page shows client-side validation on empty submit', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible();

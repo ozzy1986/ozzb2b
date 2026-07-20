@@ -6,6 +6,18 @@ name: ozzb2b
 # or 172.17.0.1 on Linux hosts) to stay within the VPS memory budget.
 # Meilisearch runs in-stack because it is small and stateless apart from its index volume.
 
+x-scraper-base: &scraper-base
+  image: ozzb2b-scraper:local
+  build:
+    context: ./apps/scraper
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  env_file: [.env.prod]
+  environment:
+    OZZB2B_ENV: production
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
 services:
   meilisearch:
     image: getmeili/meilisearch:v1.11
@@ -79,15 +91,8 @@ services:
     mem_reservation: 128m
 
   scraper:
-    image: ozzb2b-scraper:local
-    build:
-      context: ./apps/scraper
-      dockerfile: Dockerfile
+    <<: *scraper-base
     container_name: ozzb2b-scraper
-    restart: unless-stopped
-    env_file: [.env.prod]
-    environment:
-      OZZB2B_ENV: production
     command:
       [
         "celery",
@@ -95,16 +100,33 @@ services:
         "ozzb2b_scraper.tasks",
         "worker",
         "--loglevel=INFO",
+        "--queues=scraper",
         "--concurrency=1",
         # Recycle each worker after 100 tasks so accidental memory growth
         # (e.g. an exotic site that puffs up parsed objects) cannot creep
         # past the small VPS budget over a long-lived process.
         "--max-tasks-per-child=100",
       ]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     mem_limit: 256m
     mem_reservation: 64m
+
+  # Celery workers execute jobs; exactly one Beat process publishes the
+  # periodic jobs declared in ozzb2b_scraper.tasks. Keep it separate so
+  # worker restarts/scaling cannot create duplicate schedules.
+  scraper_beat:
+    <<: *scraper-base
+    container_name: ozzb2b-scraper-beat
+    command:
+      [
+        "celery",
+        "-A",
+        "ozzb2b_scraper.tasks",
+        "beat",
+        "--loglevel=INFO",
+        "--schedule=/tmp/celerybeat-schedule",
+      ]
+    mem_limit: 96m
+    mem_reservation: 32m
 
   chat:
     image: ozzb2b-chat:local
@@ -405,7 +427,7 @@ services:
     env_file: [.env.prod]
     environment:
       GF_SECURITY_ADMIN_USER: "${OZZB2B_GRAFANA_ADMIN_USER:-admin}"
-      GF_SECURITY_ADMIN_PASSWORD: "${OZZB2B_GRAFANA_ADMIN_PASSWORD:-change_me_in_prod}"
+      GF_SECURITY_ADMIN_PASSWORD: "${OZZB2B_GRAFANA_ADMIN_PASSWORD:?Grafana admin password is required}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"

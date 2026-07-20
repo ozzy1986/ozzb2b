@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# One-off bootstrap for grafana.ozzb2b.com: obtain Let's Encrypt cert and
-# install the nginx vhost. Safe to re-run; certbot --nginx is idempotent.
+# One-off bootstrap for grafana.ozzb2b.com: obtain a Let's Encrypt cert and
+# install the vhost for whichever public edge is active. Safe to re-run.
 #
 # Prereqs on DNS: an A record for grafana.ozzb2b.com pointing to this VPS.
 
@@ -11,8 +11,23 @@ cd "$APP"
 
 log() { printf "[vps_grafana_ssl] %s\n" "$*"; }
 
-# Install an HTTP-only vhost first so certbot can do the http-01 challenge.
-cat > /etc/nginx/sites-available/grafana.ozzb2b.com <<'EOF'
+if systemctl is-active --quiet apache2 2>/dev/null && ! systemctl is-active --quiet nginx 2>/dev/null; then
+    log "installing Apache HTTP vhost"
+    install -m 0644 infra/apache/grafana.ozzb2b.com.conf \
+        /etc/apache2/sites-available/grafana.ozzb2b.com.conf
+    a2enmod proxy proxy_http proxy_wstunnel headers rewrite ssl >/dev/null
+    a2ensite grafana.ozzb2b.com.conf >/dev/null
+    apache2ctl configtest
+    systemctl reload apache2
+
+    log "running certbot for Apache"
+    certbot --apache -d grafana.ozzb2b.com \
+        --non-interactive --agree-tos -m hello@ozzb2b.com --redirect
+    apache2ctl configtest
+    systemctl reload apache2
+else
+    log "installing nginx HTTP vhost"
+    cat > /etc/nginx/sites-available/grafana.ozzb2b.com <<'EOF'
 server {
     listen 80;
     listen [::]:80;
@@ -27,14 +42,20 @@ server {
     }
 }
 EOF
-ln -sf /etc/nginx/sites-available/grafana.ozzb2b.com /etc/nginx/sites-enabled/grafana.ozzb2b.com
-nginx -t && systemctl reload nginx
+    ln -sf /etc/nginx/sites-available/grafana.ozzb2b.com \
+        /etc/nginx/sites-enabled/grafana.ozzb2b.com
+    nginx -t
+    systemctl reload nginx
 
-log "running certbot"
-certbot --nginx -d grafana.ozzb2b.com --non-interactive --agree-tos -m hello@ozzb2b.com
+    log "running certbot for nginx"
+    certbot --nginx -d grafana.ozzb2b.com \
+        --non-interactive --agree-tos -m hello@ozzb2b.com --redirect
 
-log "installing full vhost"
-install -m 0644 infra/nginx/grafana.ozzb2b.com.conf /etc/nginx/sites-available/grafana.ozzb2b.com
-nginx -t && systemctl reload nginx
+    log "installing full nginx vhost"
+    install -m 0644 infra/nginx/grafana.ozzb2b.com.conf \
+        /etc/nginx/sites-available/grafana.ozzb2b.com
+    nginx -t
+    systemctl reload nginx
+fi
 
 log "done. Grafana will be reachable at https://grafana.ozzb2b.com"
