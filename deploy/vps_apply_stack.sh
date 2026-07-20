@@ -126,11 +126,17 @@ else
 fi
 
 log "ensure observability data dir ownership"
-install -d -m 0750 -o 65534 -g 65534 \
-    /var/www/ozzb2b.com/data/prometheus \
-    /var/www/ozzb2b.com/data/alertmanager
-install -d -m 0750 -o 10001 -g 10001 /var/www/ozzb2b.com/data/loki
-install -d -m 0750 -o 472 -g 0 /var/www/ozzb2b.com/data/grafana
+ensure_data_dir() {
+    local path="$1"
+    local owner="$2"
+    local group="$3"
+    install -d -m 0750 "$path"
+    chown "$owner:$group" "$path"
+}
+ensure_data_dir /var/www/ozzb2b.com/data/prometheus 65534 65534
+ensure_data_dir /var/www/ozzb2b.com/data/alertmanager 65534 65534
+ensure_data_dir /var/www/ozzb2b.com/data/loki 10001 10001
+ensure_data_dir /var/www/ozzb2b.com/data/grafana 472 0
 install -d -m 0750 \
     /var/www/ozzb2b.com/data/promtail \
     /var/www/ozzb2b.com/data/meilisearch \
