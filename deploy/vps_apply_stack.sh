@@ -201,7 +201,7 @@ bash deploy/vps_migrate.sh
 # nginx routing or core flow trips the deploy here instead of being
 # noticed by users. Fall through if no phase smoke script exists yet.
 latest_smoke=$(ls deploy/vps_smoke_phase*.sh 2>/dev/null | sort -V | tail -n1 || true)
-if [ -n "${latest_smoke:-}" ] && [ -x "$latest_smoke" ]; then
+if [ -n "${latest_smoke:-}" ] && [ -f "$latest_smoke" ]; then
     log "post-deploy smoke: $latest_smoke"
     if ! bash "$latest_smoke"; then
         log "smoke failed; rolling back to previous git ref"
