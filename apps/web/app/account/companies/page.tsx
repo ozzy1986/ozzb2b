@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import { listMyProviders, listMyClaims } from '@/lib/api';
 import { authHeaders } from '@/lib/server-fetch';
 import { requireAuthCookie } from '@/lib/auth-guard';

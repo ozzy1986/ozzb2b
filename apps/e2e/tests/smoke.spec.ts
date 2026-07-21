@@ -16,19 +16,41 @@ test.describe('site smoke', () => {
     ).toBeVisible();
   });
 
+  test('home page client navigation reaches categories', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Категории', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/categories$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
   test('live Russian catalog contains freshly scraped providers', async ({ page }) => {
     test.skip(
       process.env.E2E_EXPECT_LIVE_DATA !== '1',
       'Live-data assertion is enabled only for post-deploy smoke runs',
     );
 
-    const response = await page.goto('/providers?country=RU');
+    const browserErrors: string[] = [];
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+
+    const response = await page.goto('/');
     expect(response?.ok()).toBeTruthy();
+
+    await page.locator('main a[href*="category=it"]').first().click();
+    await expect(page).toHaveURL(/\/providers\?.*category=it/);
 
     const cards = page.locator('.grid-providers > .card');
     await expect(cards.first()).toBeVisible();
     expect(await cards.count()).toBeGreaterThan(0);
     await expect(page.getByText(/Обновлено/).first()).toBeVisible();
+
+    await cards.first().click();
+    await expect(page).toHaveURL(/\/providers\/[^/?]+$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    expect(browserErrors).toEqual([]);
   });
 
   test('login page shows client-side validation on empty submit', async ({ page }) => {

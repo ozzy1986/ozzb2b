@@ -109,6 +109,24 @@ def test_me_rejects_bad_token(client: TestClient) -> None:
     assert resp.status_code == 401
 
 
+def test_session_returns_null_for_anonymous_user(client: TestClient) -> None:
+    response = client.get("/auth/session")
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_session_returns_authenticated_user(client: TestClient) -> None:
+    body = _register(client)
+    response = client.get(
+        "/auth/session",
+        headers={"Authorization": f"Bearer {body['access_token']}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "user@example.com"
+
+
 def test_logout_returns_204(client: TestClient) -> None:
     _register(client)
     resp = client.post("/auth/logout")

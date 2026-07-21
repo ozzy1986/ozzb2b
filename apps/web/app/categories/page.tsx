@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import type { Metadata } from 'next';
 import { getCategoryTree } from '@/lib/api';
 import { trCategory, trCategoryDescription } from '@/lib/ru';

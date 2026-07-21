@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { listConversations } from '@/lib/api';

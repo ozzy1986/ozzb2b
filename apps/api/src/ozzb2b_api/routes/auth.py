@@ -11,7 +11,7 @@ from ozzb2b_api.clients.redis import get_redis
 from ozzb2b_api.config import get_settings
 from ozzb2b_api.db.models import User
 from ozzb2b_api.observability.metrics import auth_rate_limit_blocked_total
-from ozzb2b_api.routes.deps import DbSession, get_current_user
+from ozzb2b_api.routes.deps import DbSession, get_current_user, get_current_user_optional
 from ozzb2b_api.schemas.auth import (
     LoginRequest,
     RegisterRequest,
@@ -260,3 +260,11 @@ async def logout(
 @router.get("/me", response_model=UserPublic)
 async def me(current_user: Annotated[User, Depends(get_current_user)]) -> UserPublic:
     return UserPublic.model_validate(current_user)
+
+
+@router.get("/session", response_model=UserPublic | None)
+async def session(
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
+) -> UserPublic | None:
+    """Return the current user without logging a 401 for anonymous navigation."""
+    return UserPublic.model_validate(current_user) if current_user else None

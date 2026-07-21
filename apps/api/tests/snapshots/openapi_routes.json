@@ -21,6 +21,10 @@
   ],
   [
     "GET",
+    "/auth/session"
+  ],
+  [
+    "GET",
     "/categories"
   ],
   [

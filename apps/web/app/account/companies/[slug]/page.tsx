@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import { notFound } from 'next/navigation';
 import { getProvider, listMyProviders } from '@/lib/api';
 import { authHeaders } from '@/lib/server-fetch';

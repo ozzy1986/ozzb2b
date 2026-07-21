@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import type { ReactNode } from 'react';
 import { SiteNav } from '@/components/SiteNav';
 import './globals.css';

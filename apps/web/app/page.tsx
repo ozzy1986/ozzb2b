@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import { getCategoryTree, listProviders } from '@/lib/api';
 import { trCategory, trCategoryDescription, trCity, trCountry } from '@/lib/ru';
 import { primaryCategories } from '@/lib/categories';

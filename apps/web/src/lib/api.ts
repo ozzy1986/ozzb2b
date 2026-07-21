@@ -267,7 +267,7 @@ export async function logout(): Promise<void> {
 
 export async function getMe(init?: RequestInit): Promise<UserPublic | null> {
   try {
-    return await fetchJson<UserPublic>('/auth/me', init);
+    return await fetchJson<UserPublic | null>('/auth/session', init);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return null;
     throw err;

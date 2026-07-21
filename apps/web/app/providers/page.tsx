@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/AppLink';
 import type { Metadata } from 'next';
 import { getCategoryTree, listProviders, searchProviders } from '@/lib/api';
 import type { CategoryTreeNode, ProviderListResponse, ProviderSummary, FacetValue } from '@/lib/types';
