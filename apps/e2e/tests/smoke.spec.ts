@@ -16,12 +16,14 @@ test.describe('site smoke', () => {
     ).toBeVisible();
   });
 
-  test('home page client navigation reaches categories', async ({ page }) => {
+  test('home page navigation reaches categories', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('link', { name: 'Категории', exact: true }).click();
 
     await expect(page).toHaveURL(/\/categories$/);
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Категории' }),
+    ).toBeVisible();
   });
 
   test('live Russian catalog contains freshly scraped providers', async ({ page }) => {

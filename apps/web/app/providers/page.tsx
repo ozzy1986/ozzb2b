@@ -53,6 +53,13 @@ export default async function ProvidersPage({
     facets: true,
   };
 
+  const emptyCatalog: ProviderListResponse = {
+    items: [],
+    total: 0,
+    limit,
+    offset,
+    facets: null,
+  };
   const dataPromise = q
     ? searchProviders({ ...listParams, q })
         .then((search) => ({
@@ -66,10 +73,12 @@ export default async function ProvidersPage({
           engineLabel: search.engine,
         }))
         .catch(async () => ({
-          data: await listProviders(listParams),
+          data: await listProviders(listParams).catch(() => emptyCatalog),
           engineLabel: 'каталог',
         }))
-    : listProviders(listParams).then((catalog) => ({ data: catalog, engineLabel: 'каталог' }));
+    : listProviders(listParams)
+        .then((catalog) => ({ data: catalog, engineLabel: 'каталог' }))
+        .catch(() => ({ data: emptyCatalog, engineLabel: 'каталог' }));
   const [{ data, engineLabel }, categoryTree] = await Promise.all([
     dataPromise,
     getCategoryTree().catch(() => []),

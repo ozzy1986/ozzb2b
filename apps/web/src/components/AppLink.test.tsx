@@ -7,9 +7,9 @@ describe('<AppLink />', () => {
   afterEach(() => cleanup());
 
   it('renders a native anchor for internal routes', () => {
-    render(<AppLink href="/providers?country=RU">Providers</AppLink>);
+    render(<AppLink href="/providers?country=RU">Компании</AppLink>);
 
-    const link = screen.getByRole('link', { name: 'Providers' });
+    const link = screen.getByRole('link', { name: 'Компании' });
     expect(link.tagName).toBe('A');
     expect(link.getAttribute('href')).toBe('/providers?country=RU');
   });
@@ -17,7 +17,7 @@ describe('<AppLink />', () => {
   it('stringifies object href values', () => {
     render(
       <AppLink href={{ pathname: '/providers', query: { country: 'RU' } }}>
-        Providers
+        Компании
       </AppLink>,
     );
 
