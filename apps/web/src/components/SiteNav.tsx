@@ -22,9 +22,6 @@ export function SiteNav() {
       {current.status === 'authenticated' && current.user.role === 'admin' ? (
         <Link href="/admin/analytics">Аналитика</Link>
       ) : null}
-      <a href="https://github.com/ozzy1986/ozzb2b" target="_blank" rel="noreferrer">
-        Исходный код
-      </a>
     </nav>
   );
 }
