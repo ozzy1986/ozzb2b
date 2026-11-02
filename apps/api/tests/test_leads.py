@@ -202,7 +202,7 @@ def _payload(**overrides: Any) -> dict[str, Any]:
         "contact_name": "Иван",
         "contact_email": "ivan@client.ru",
         "consent": True,
-        "form_token": "1000.abcdef.0123456789abcdef",
+        "form_token": "1000.nonce.not-a-real-signature",
     }
     data.update(overrides)
     return data
@@ -250,4 +250,3 @@ def test_unsubscribe_rejects_bad_token(client: TestClient) -> None:
 )
 def test_admin_lead_routes_require_auth(client: TestClient, method: str, path: str) -> None:
     assert client.request(method, path).status_code == 401
-
