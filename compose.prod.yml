@@ -235,11 +235,16 @@ services:
   # default `ozzb2b — overview` dashboard. Loki + Promtail aggregate docker
   # logs of this compose project. Everything binds to 127.0.0.1 and is
   # exposed to the world only via the nginx `grafana.ozzb2b.com` vhost.
+  #
+  # The whole stack is opt-in via the `monitoring` profile: on the shared VPS
+  # it costs more CPU/RAM than the product itself, so a plain `up -d` skips it.
+  # Enable with `--profile monitoring` (deploy: OZZB2B_MONITORING=1).
 
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: ozzb2b-prometheus
     restart: unless-stopped
+    profiles: ["monitoring"]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=14d
@@ -270,6 +275,7 @@ services:
     image: prom/node-exporter:v1.8.2
     container_name: ozzb2b-node-exporter
     restart: unless-stopped
+    profiles: ["monitoring"]
     pid: host
     command:
       - --path.procfs=/host/proc
@@ -297,6 +303,7 @@ services:
     image: ncabatoff/process-exporter:v0.8.7
     container_name: ozzb2b-process-exporter
     restart: unless-stopped
+    profiles: ["monitoring"]
     pid: host
     command:
       - -procfs
@@ -333,6 +340,7 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
     container_name: ozzb2b-cadvisor
     restart: unless-stopped
+    profiles: ["monitoring"]
     privileged: true
     command:
       - --housekeeping_interval=30s
@@ -385,6 +393,7 @@ services:
     image: grafana/loki:3.2.0
     container_name: ozzb2b-loki
     restart: unless-stopped
+    profiles: ["monitoring"]
     command: ["-config.file=/etc/loki/local-config.yaml"]
     volumes:
       - ./infra/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
@@ -403,6 +412,7 @@ services:
     image: grafana/promtail:3.2.0
     container_name: ozzb2b-promtail
     restart: unless-stopped
+    profiles: ["monitoring"]
     command: ["-config.file=/etc/promtail/config.yaml"]
     volumes:
       - ./infra/promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
@@ -424,6 +434,7 @@ services:
     image: grafana/grafana:11.3.0
     container_name: ozzb2b-grafana
     restart: unless-stopped
+    profiles: ["monitoring"]
     env_file: [.env.prod]
     environment:
       GF_USERS_ALLOW_SIGN_UP: "false"

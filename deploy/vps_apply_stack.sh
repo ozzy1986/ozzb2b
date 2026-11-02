@@ -5,6 +5,10 @@ APP="${APP:-/var/www/ozzb2b.com/app}"
 
 log() { printf "[vps_apply_stack] %s\n" "$*"; }
 
+# The observability stack (Prometheus, Grafana, Loki, exporters, Alertmanager)
+# overloads the shared VPS, so it is off unless explicitly requested.
+OZZB2B_MONITORING="${OZZB2B_MONITORING:-0}"
+
 cd "$APP"
 
 export GIT_SSH_COMMAND="ssh -i /root/.ssh/ozzb2b_deploy -o IdentitiesOnly=yes"
@@ -98,8 +102,11 @@ if systemctl is-active --quiet apache2 2>/dev/null && ! systemctl is-active --qu
     log "sync apache vhosts (Apache is public edge)"
     install -m 0644 infra/apache/api.ozzb2b.com.conf /etc/apache2/sites-available/api.ozzb2b.com.conf
     install -m 0644 infra/apache/ozzb2b.com.conf     /etc/apache2/sites-available/ozzb2b.com.conf
-    install -m 0644 infra/apache/grafana.ozzb2b.com.conf /etc/apache2/sites-available/grafana.ozzb2b.com.conf
-    a2ensite ozzb2b.com.conf api.ozzb2b.com.conf grafana.ozzb2b.com.conf >/dev/null
+    a2ensite ozzb2b.com.conf api.ozzb2b.com.conf >/dev/null
+    if [ "$OZZB2B_MONITORING" = "1" ]; then
+        install -m 0644 infra/apache/grafana.ozzb2b.com.conf /etc/apache2/sites-available/grafana.ozzb2b.com.conf
+        a2ensite grafana.ozzb2b.com.conf >/dev/null
+    fi
     apache2ctl configtest
     systemctl reload apache2
 else
@@ -112,12 +119,12 @@ else
     ln -sf /etc/nginx/sites-available/ozzb2b.com     /etc/nginx/sites-enabled/ozzb2b.com
     # Grafana vhost only enabled when its Let's Encrypt cert already exists;
     # certbot must be run manually the first time (deploy/vps_grafana_ssl.sh).
-    if [ -f /etc/letsencrypt/live/grafana.ozzb2b.com/fullchain.pem ]; then
+    if [ "$OZZB2B_MONITORING" = "1" ] && [ -f /etc/letsencrypt/live/grafana.ozzb2b.com/fullchain.pem ]; then
         install -m 0644 infra/nginx/grafana.ozzb2b.com.conf /etc/nginx/sites-available/grafana.ozzb2b.com
         ln -sf /etc/nginx/sites-available/grafana.ozzb2b.com /etc/nginx/sites-enabled/grafana.ozzb2b.com
         log "grafana vhost enabled"
     else
-        log "grafana vhost skipped (no SSL cert yet; run deploy/vps_grafana_ssl.sh)"
+        log "grafana vhost skipped (monitoring off or no SSL cert; see deploy/vps_grafana_ssl.sh)"
     fi
     # Clean up any stray .conf variant we might have created on earlier attempts.
     rm -f /etc/nginx/sites-available/api.ozzb2b.com.conf /etc/nginx/sites-enabled/api.ozzb2b.com.conf
@@ -125,41 +132,49 @@ else
     nginx -t && systemctl reload nginx
 fi
 
-log "ensure observability data dir ownership"
-ensure_data_dir() {
-    local path="$1"
-    local owner="$2"
-    local group="$3"
-    install -d -m 0750 "$path"
-    chown "$owner:$group" "$path"
-}
-ensure_data_dir /var/www/ozzb2b.com/data/prometheus 65534 65534
-ensure_data_dir /var/www/ozzb2b.com/data/alertmanager 65534 65534
-ensure_data_dir /var/www/ozzb2b.com/data/loki 10001 10001
-ensure_data_dir /var/www/ozzb2b.com/data/grafana 472 0
 install -d -m 0750 \
-    /var/www/ozzb2b.com/data/promtail \
     /var/www/ozzb2b.com/data/meilisearch \
     /var/www/ozzb2b.com/data/clickhouse
 
+compose_args=(-f compose.prod.yml)
+if [ "$OZZB2B_MONITORING" = "1" ]; then
+    log "ensure observability data dir ownership"
+    ensure_data_dir() {
+        local path="$1"
+        local owner="$2"
+        local group="$3"
+        install -d -m 0750 "$path"
+        chown "$owner:$group" "$path"
+    }
+    ensure_data_dir /var/www/ozzb2b.com/data/prometheus 65534 65534
+    ensure_data_dir /var/www/ozzb2b.com/data/alertmanager 65534 65534
+    ensure_data_dir /var/www/ozzb2b.com/data/loki 10001 10001
+    ensure_data_dir /var/www/ozzb2b.com/data/grafana 472 0
+    install -d -m 0750 /var/www/ozzb2b.com/data/promtail
+    compose_args+=(--profile monitoring --profile alerts)
+else
+    log "monitoring disabled (set OZZB2B_MONITORING=1 to deploy it)"
+fi
+
 log "docker compose up --build"
-compose_args=(-f compose.prod.yml --profile alerts)
 docker compose "${compose_args[@]}" up -d --build
 
-log "synchronize Grafana admin password"
-grafana_password_synced=0
-for _ in $(seq 1 15); do
-    if docker compose -f compose.prod.yml exec -T grafana \
-        grafana cli admin reset-admin-password "$OZZB2B_GRAFANA_ADMIN_PASSWORD" \
-        >/dev/null 2>&1; then
-        grafana_password_synced=1
-        break
+if [ "$OZZB2B_MONITORING" = "1" ]; then
+    log "synchronize Grafana admin password"
+    grafana_password_synced=0
+    for _ in $(seq 1 15); do
+        if docker compose -f compose.prod.yml exec -T grafana \
+            grafana cli admin reset-admin-password "$OZZB2B_GRAFANA_ADMIN_PASSWORD" \
+            >/dev/null 2>&1; then
+            grafana_password_synced=1
+            break
+        fi
+        sleep 2
+    done
+    if [ "$grafana_password_synced" -ne 1 ]; then
+        log "failed to synchronize Grafana admin password"
+        exit 1
     fi
-    sleep 2
-done
-if [ "$grafana_password_synced" -ne 1 ]; then
-    log "failed to synchronize Grafana admin password"
-    exit 1
 fi
 
 # Compose may create a new br-* after first up. Keep UFW open for Docker
