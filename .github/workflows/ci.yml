@@ -105,9 +105,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          # Pinned to 1.25 so the stdlib CVEs surfaced by govulncheck are
+          # Pinned to 1.26 so the stdlib CVEs surfaced by govulncheck are
           # already patched in the binary we build and test.
-          go-version: "1.25"
+          go-version: "1.26"
           # Explicit path to go.sum: setup-go's default cache lookup walks the
           # repo root, but our Go modules live under apps/<svc>; without this
           # the cache step logs "Dependencies file is not found".
@@ -137,8 +137,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          # Same rationale as the chat job — 1.25 clears stdlib CVEs.
-          go-version: "1.25"
+          # Same rationale as the chat job — 1.26 clears stdlib CVEs.
+          go-version: "1.26"
           cache-dependency-path: apps/events/go.sum
       - run: go vet ./...
       - run: go build ./...
@@ -570,9 +570,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          # govulncheck@latest requires Go >= 1.25; also bumping toolchain
-          # here clears the stdlib CVEs that are only fixed in 1.25.x.
-          go-version: "1.25"
+          # govulncheck v1.8.0+ requires Go >= 1.26; also bumping toolchain
+          # here clears the stdlib CVEs that are only fixed in 1.26.x.
+          go-version: "1.26"
           # Both Go modules participate in this scan — feed both go.sum files
           # so the dependency cache key reflects either module changing.
           cache-dependency-path: |
@@ -580,8 +580,8 @@ jobs:
             apps/events/go.sum
       - name: govulncheck chat
         run: |
-          # Pinned: govulncheck >= 1.8.0 requires Go 1.26.
-          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+          # Pinned so a new release can't silently require a newer Go.
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
           govulncheck ./...
         working-directory: apps/chat
       - name: govulncheck events

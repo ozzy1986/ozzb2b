@@ -14,8 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml alembic.ini ./
 COPY src ./src
 
+# pip/setuptools/wheel are build-time only; dropping them keeps their
+# vendored copies (msgpack, urllib3, setuptools) out of the runtime image.
 RUN pip install --upgrade pip setuptools wheel \
-    && pip install .
+    && pip install . \
+    && pip uninstall -y setuptools wheel pip
 
 RUN groupadd --system app && useradd --system --gid app --home /app app \
     && chown -R app:app /app
