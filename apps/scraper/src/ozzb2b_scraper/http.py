@@ -104,9 +104,17 @@ class PoliteFetcher:
                     )
                     raise ResponseTooLarge(url)
                 chunks.append(chunk)
+            # `aiter_bytes` already decoded gzip/br; keeping Content-Encoding
+            # would make httpx decode the body a second time and fail with
+            # "incorrect header check" on every compressed page.
+            headers = [
+                (k, v)
+                for k, v in resp.headers.multi_items()
+                if k.lower() not in ("content-encoding", "content-length")
+            ]
             full = httpx.Response(
                 status_code=resp.status_code,
-                headers=resp.headers,
+                headers=headers,
                 content=b"".join(chunks),
                 request=resp.request,
             )

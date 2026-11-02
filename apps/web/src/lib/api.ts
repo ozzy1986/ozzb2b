@@ -6,7 +6,11 @@ import type {
   City,
   Conversation,
   Country,
+  LeadDetail,
+  LeadStatus,
+  LeadSummary,
   LegalForm,
+  OutreachMessage,
   ProviderDetail,
   ProviderListResponse,
   TokenResponse,
@@ -425,4 +429,103 @@ export async function updateOwnedProvider(
       body: JSON.stringify(patch),
     },
   );
+}
+
+// ---- leads ----
+
+export type LeadCreate = {
+  category_slug: string;
+  city_id: number | null;
+  description: string;
+  budget: string | null;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string | null;
+  company_name: string | null;
+  consent: boolean;
+  form_token: string;
+  website: string;
+};
+
+export async function getLeadFormToken(): Promise<string> {
+  const body = await fetchJson<{ token: string }>('/leads/form-token');
+  return body.token;
+}
+
+export async function createLead(payload: LeadCreate): Promise<void> {
+  await fetchJson<{ ok: boolean }>('/leads', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function unsubscribeEmail(email: string, token: string): Promise<void> {
+  const res = await fetch(`${apiUrl()}/email/unsubscribe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, token }),
+  });
+  if (!res.ok) {
+    let detail = `${res.status}`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      detail = toApiDetail(body?.detail, detail);
+    } catch {
+      // keep status-only detail
+    }
+    throw new ApiError(res.status, detail);
+  }
+}
+
+// ---- admin leads ----
+
+export async function listLeads(init?: AdminFetchInit): Promise<LeadSummary[]> {
+  return fetchJson<LeadSummary[]>('/admin/leads', init);
+}
+
+export async function getLead(id: string, init?: AdminFetchInit): Promise<LeadDetail> {
+  return fetchJson<LeadDetail>(`/admin/leads/${encodeURIComponent(id)}`, init);
+}
+
+export async function updateLead(
+  id: string,
+  patch: { status?: LeadStatus; admin_note?: string },
+): Promise<LeadDetail> {
+  return fetchJson<LeadDetail>(`/admin/leads/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function addOutreach(leadId: string, providerSlug: string): Promise<OutreachMessage> {
+  return fetchJson<OutreachMessage>(`/admin/leads/${encodeURIComponent(leadId)}/outreach`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ provider_slug: providerSlug }),
+  });
+}
+
+export async function updateOutreach(
+  id: string,
+  patch: { to_email?: string; subject?: string; body?: string },
+): Promise<OutreachMessage> {
+  return fetchJson<OutreachMessage>(`/admin/leads/outreach/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function sendOutreach(id: string): Promise<OutreachMessage> {
+  return fetchJson<OutreachMessage>(`/admin/leads/outreach/${encodeURIComponent(id)}/send`, {
+    method: 'POST',
+  });
+}
+
+export async function skipOutreach(id: string): Promise<OutreachMessage> {
+  return fetchJson<OutreachMessage>(`/admin/leads/outreach/${encodeURIComponent(id)}/skip`, {
+    method: 'POST',
+  });
 }

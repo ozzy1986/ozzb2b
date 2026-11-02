@@ -17,6 +17,7 @@ from ozzb2b_scraper.spiders import (
     DemoDirectorySpider,
     RuBusinessServicesSeedSpider,
     RuFnsSmeRegistrySpider,
+    RuMarketplaceAccountingSpider,
     RuOutsourcingSeedSpider,
     RuRegionalItSeedSpider,
 )
@@ -97,4 +98,5 @@ def test_crawl_all_skips_demo_and_aggregates(
         RuBusinessServicesSeedSpider.source,
         RuRegionalItSeedSpider.source,
         RuFnsSmeRegistrySpider.source,
+        RuMarketplaceAccountingSpider.source,
     }

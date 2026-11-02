@@ -791,3 +791,42 @@ a:hover {
 .filter-clear:hover {
   text-decoration: underline;
 }
+
+/* Lead request form and admin outreach editor */
+.form-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.form-card input:not([type='checkbox']),
+.form-card select,
+.form-card textarea {
+  width: 100%;
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 15px;
+}
+.form-card textarea {
+  resize: vertical;
+}
+.form-card input:focus,
+.form-card select:focus,
+.form-card textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+.form-card input:disabled,
+.form-card textarea:disabled {
+  opacity: 0.7;
+}
+.lead-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}

@@ -13,6 +13,7 @@ const CATEGORY_RU: Record<string, string> = {
   payroll: 'Зарплата и кадры',
   'audit-assurance': 'Аудит',
   'financial-reporting': 'Финансовая отчетность',
+  'marketplace-accounting': 'Бухгалтерия для селлеров маркетплейсов',
   legal: 'Юридические услуги',
   'corporate-law': 'Корпоративное право',
   contracts: 'Договорное право',
@@ -70,6 +71,9 @@ const CITY_RU_BY_EN: Record<string, string> = {
   Perm: 'Пермь',
   'Rostov-on-Don': 'Ростов-на-Дону',
   Krasnodar: 'Краснодар',
+  Ufa: 'Уфа',
+  Chelyabinsk: 'Челябинск',
+  Tyumen: 'Тюмень',
 };
 
 export function trCategory(slug: string, fallback: string): string {

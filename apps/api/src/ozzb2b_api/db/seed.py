@@ -65,6 +65,7 @@ CATEGORIES: tuple[CategorySeed, ...] = (
             ("payroll", "Payroll"),
             ("audit-assurance", "Audit & assurance"),
             ("financial-reporting", "Financial reporting"),
+            ("marketplace-accounting", "Accounting for marketplace sellers"),
         ),
     ),
     CategorySeed(

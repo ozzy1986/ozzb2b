@@ -125,3 +125,46 @@ export type TopProviders = {
     count: number;
   }[];
 };
+
+export type LeadStatus = 'new' | 'in_progress' | 'closed' | 'spam';
+export type OutreachStatus = 'draft' | 'sent' | 'skipped' | 'failed';
+
+export type LeadSummary = {
+  id: string;
+  status: LeadStatus;
+  category_slug: string | null;
+  category_name: string | null;
+  city_name: string | null;
+  contact_name: string;
+  company_name: string | null;
+  description: string;
+  drafts: number;
+  sent: number;
+  created_at: string;
+};
+
+export type OutreachMessage = {
+  id: string;
+  provider: {
+    id: string;
+    slug: string;
+    display_name: string;
+    website: string | null;
+    is_claimed: boolean;
+  };
+  to_email: string;
+  subject: string;
+  body: string;
+  status: OutreachStatus;
+  sent_at: string | null;
+  error: string | null;
+  updated_at: string;
+};
+
+export type LeadDetail = LeadSummary & {
+  budget: string | null;
+  contact_email: string;
+  contact_phone: string | null;
+  admin_note: string | null;
+  outreach: OutreachMessage[];
+};

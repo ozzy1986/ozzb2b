@@ -3,6 +3,13 @@
 from ozzb2b_api.db.models.category import Category
 from ozzb2b_api.db.models.chat import Conversation, Message
 from ozzb2b_api.db.models.geo import City, Country
+from ozzb2b_api.db.models.lead import (
+    EmailSuppression,
+    Lead,
+    LeadStatus,
+    OutreachMessage,
+    OutreachStatus,
+)
 from ozzb2b_api.db.models.legal_form import LegalForm
 from ozzb2b_api.db.models.provider import Provider, ProviderCategory, ProviderStatus
 from ozzb2b_api.db.models.provider_claim import ClaimMethod, ClaimStatus, ProviderClaim
@@ -15,8 +22,13 @@ __all__ = [
     "ClaimStatus",
     "Conversation",
     "Country",
+    "EmailSuppression",
+    "Lead",
+    "LeadStatus",
     "LegalForm",
     "Message",
+    "OutreachMessage",
+    "OutreachStatus",
     "Provider",
     "ProviderCategory",
     "ProviderClaim",

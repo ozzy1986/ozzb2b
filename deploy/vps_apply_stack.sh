@@ -32,6 +32,10 @@ set -a
 source /root/.ozzb2b_secrets
 set +a
 
+# Mail turns on once the Timeweb mailbox password is in /root/.ozzb2b_secrets.
+mail_enabled=false
+[ -n "${OZZB2B_SMTP_PASSWORD:-}" ] && mail_enabled=true
+
 cat > .env.prod <<EOF
 OZZB2B_ENV=production
 
@@ -69,6 +73,20 @@ OZZB2B_RATE_LIMIT_LOGIN_MAX=10
 OZZB2B_RATE_LIMIT_REGISTER_MAX=5
 OZZB2B_RATE_LIMIT_REFRESH_MAX=30
 OZZB2B_RATE_LIMIT_WINDOW_SECONDS=300
+# Apache is the single reverse-proxy hop; without this every client shares
+# the docker gateway IP and per-IP limits become global.
+OZZB2B_TRUSTED_PROXY_COUNT=1
+
+# Leads + outreach e-mail (Timeweb SMTP). Drafts are always sent by hand.
+OZZB2B_PUBLIC_SITE_URL=https://ozzb2b.com
+OZZB2B_MAIL_ENABLED=${mail_enabled}
+OZZB2B_SMTP_HOST=${OZZB2B_SMTP_HOST:-smtp.timeweb.ru}
+OZZB2B_SMTP_PORT=${OZZB2B_SMTP_PORT:-465}
+OZZB2B_SMTP_USERNAME=${OZZB2B_SMTP_USERNAME:-}
+OZZB2B_SMTP_PASSWORD=${OZZB2B_SMTP_PASSWORD:-}
+OZZB2B_MAIL_FROM=${OZZB2B_MAIL_FROM:-ozzb2b <noreply@ozzb2b.com>}
+OZZB2B_MAIL_REPLY_TO=${OZZB2B_MAIL_REPLY_TO:-}
+OZZB2B_ADMIN_NOTIFY_EMAIL=${OZZB2B_ADMIN_NOTIFY_EMAIL:-}
 
 NEXT_PUBLIC_OZZB2B_API_URL=https://api.ozzb2b.com
 

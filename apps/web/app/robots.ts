@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/admin/', '/unsubscribe'],
       },
     ],
     sitemap: 'https://ozzb2b.com/sitemap.xml',

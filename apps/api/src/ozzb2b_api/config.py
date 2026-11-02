@@ -116,6 +116,45 @@ class Settings(BaseSettings):
         description="Logout calls per window per IP.",
     )
 
+    rate_limit_lead_max: int = Field(
+        default=3,
+        description="Public lead submissions per window per IP (anti-spam).",
+    )
+    lead_min_fill_seconds: int = Field(
+        default=4,
+        description="Forms submitted faster than this after the token was issued are bots.",
+    )
+    lead_form_token_ttl_seconds: int = Field(default=2 * 60 * 60)
+    lead_max_drafts: int = Field(
+        default=5,
+        description="How many matching providers get an outreach draft per lead.",
+    )
+
+    public_site_url: str = Field(
+        default="http://localhost:3000",
+        description="Base URL of the web app, used for links in e-mails.",
+    )
+
+    mail_enabled: bool = Field(
+        default=False,
+        description="When false e-mails are only logged (dev/test).",
+    )
+    smtp_host: str = Field(default="smtp.timeweb.ru")
+    smtp_port: int = Field(default=465)
+    smtp_use_ssl: bool = Field(default=True, description="Implicit TLS (465); else STARTTLS.")
+    smtp_username: str = Field(default="")
+    smtp_password: str = Field(default="")
+    smtp_timeout_seconds: float = Field(default=20.0)
+    mail_from: str = Field(default="ozzb2b <noreply@ozzb2b.com>")
+    mail_reply_to: str = Field(
+        default="",
+        description="Reply-To for outreach e-mails; empty means replies go to `mail_from`.",
+    )
+    admin_notify_email: str = Field(
+        default="",
+        description="Where new-lead notifications go. Empty disables them.",
+    )
+
     hsts_max_age_seconds: int = Field(default=15_552_000)
 
     auth_cookie_domain: str | None = Field(

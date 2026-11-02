@@ -17,6 +17,14 @@
   ],
   [
     "GET",
+    "/admin/leads"
+  ],
+  [
+    "GET",
+    "/admin/leads/{lead_id}"
+  ],
+  [
+    "GET",
     "/auth/me"
   ],
   [
@@ -57,6 +65,10 @@
   ],
   [
     "GET",
+    "/leads/form-token"
+  ],
+  [
+    "GET",
     "/legal-forms"
   ],
   [
@@ -89,6 +101,14 @@
   ],
   [
     "PATCH",
+    "/admin/leads/outreach/{outreach_id}"
+  ],
+  [
+    "PATCH",
+    "/admin/leads/{lead_id}"
+  ],
+  [
+    "PATCH",
     "/providers/{slug}"
   ],
   [
@@ -98,6 +118,18 @@
   [
     "POST",
     "/admin/claims/{claim_id}/reject"
+  ],
+  [
+    "POST",
+    "/admin/leads/outreach/{outreach_id}/send"
+  ],
+  [
+    "POST",
+    "/admin/leads/outreach/{outreach_id}/skip"
+  ],
+  [
+    "POST",
+    "/admin/leads/{lead_id}/outreach"
   ],
   [
     "POST",
@@ -134,6 +166,14 @@
   [
     "POST",
     "/chat/conversations/{conversation_id}/ws-token"
+  ],
+  [
+    "POST",
+    "/email/unsubscribe"
+  ],
+  [
+    "POST",
+    "/leads"
   ],
   [
     "POST",

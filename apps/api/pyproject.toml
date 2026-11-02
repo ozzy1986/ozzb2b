@@ -122,6 +122,9 @@ ignore = ["S101", "S105", "S106", "N811"]
 # Seed file intentionally contains Russian/Ukrainian strings (RUF001) and long
 # description literals (E501) that we don't want to reflow.
 "src/ozzb2b_api/db/seed.py" = ["E501", "RUF001"]
+# Outreach and notification e-mail templates are written in Russian.
+"src/ozzb2b_api/services/leads.py" = ["RUF001"]
+"tests/test_leads.py" = ["S", "N", "RUF001"]
 # Alembic baseline migrations mirror SQL column definitions and are read
 # top-to-bottom; wrapping them hurts readability more than it helps.
 "src/ozzb2b_api/db/migrations/versions/*.py" = ["E501"]

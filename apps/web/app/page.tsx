@@ -29,6 +29,12 @@ export default async function HomePage() {
           Сравнивайте исполнителей и связывайтесь напрямую.
         </p>
         <ProviderSearchBox countries={['RU']} />
+        <p style={{ marginTop: 16 }}>
+          Не хотите искать сами?{' '}
+          <Link href="/request" className="contact-cta">
+            Оставьте заявку — подберём подрядчика
+          </Link>
+        </p>
       </section>
 
       <div className="section-head">

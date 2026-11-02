@@ -4,6 +4,7 @@ from ozzb2b_scraper.spiders.base import Spider, SpiderContext
 from ozzb2b_scraper.spiders.demo_directory import DemoDirectorySpider
 from ozzb2b_scraper.spiders.ru_business_services_seed import RuBusinessServicesSeedSpider
 from ozzb2b_scraper.spiders.ru_fns_sme_registry import RuFnsSmeRegistrySpider
+from ozzb2b_scraper.spiders.ru_marketplace_accounting import RuMarketplaceAccountingSpider
 from ozzb2b_scraper.spiders.ru_outsourcing_seed import RuOutsourcingSeedSpider
 from ozzb2b_scraper.spiders.ru_regional_it_seed import RuRegionalItSeedSpider
 
@@ -13,6 +14,7 @@ ALL_SPIDERS: tuple[type[Spider], ...] = (
     RuBusinessServicesSeedSpider,
     RuRegionalItSeedSpider,
     RuFnsSmeRegistrySpider,
+    RuMarketplaceAccountingSpider,
 )
 
 __all__ = [
@@ -20,6 +22,7 @@ __all__ = [
     "DemoDirectorySpider",
     "RuBusinessServicesSeedSpider",
     "RuFnsSmeRegistrySpider",
+    "RuMarketplaceAccountingSpider",
     "RuOutsourcingSeedSpider",
     "RuRegionalItSeedSpider",
     "Spider",

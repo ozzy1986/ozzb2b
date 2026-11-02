@@ -89,3 +89,17 @@ describe('isApiErrorStatus', () => {
     expect(isApiErrorStatus(new Error('x'), 401)).toBe(false);
   });
 });
+
+describe('humanizeError lead form', () => {
+  it('explains anti-spam rejections in Russian', () => {
+    expect(humanizeError(new ApiError(422, 'form submitted too fast'), 'lead-submit')).toContain(
+      'слишком быстро',
+    );
+    expect(humanizeError(new ApiError(422, 'invalid form token'), 'lead-submit')).toContain(
+      'Обновите страницу',
+    );
+    expect(humanizeError(new ApiError(409, 'recipient unsubscribed'), 'outreach')).toContain(
+      'отписался',
+    );
+  });
+});

@@ -18,6 +18,7 @@ from ozzb2b_scraper.spiders import (
     ALL_SPIDERS,
     DemoDirectorySpider,
     RuBusinessServicesSeedSpider,
+    RuMarketplaceAccountingSpider,
     RuOutsourcingSeedSpider,
     RuRegionalItSeedSpider,
 )
@@ -66,6 +67,12 @@ app.conf.update(
             "task": "ozzb2b.scraper.crawl_source",
             "schedule": crontab(minute=40, hour=2),
             "args": (RuRegionalItSeedSpider.source,),
+        },
+        # Third-party sites change slowly; weekly keeps the crawl polite.
+        "refresh-ru-marketplace-accounting-weekly": {
+            "task": "ozzb2b.scraper.crawl_source",
+            "schedule": crontab(minute=0, hour=3, day_of_week=1),
+            "args": (RuMarketplaceAccountingSpider.source,),
         },
     },
 )

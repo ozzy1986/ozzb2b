@@ -41,6 +41,22 @@ const DETAIL_MAP: Record<string, string> = {
   'conversation not found': 'Беседа не найдена.',
   'access denied': 'Доступ запрещён.',
   'message body must not be empty': 'Сообщение не может быть пустым.',
+  // leads / outreach
+  'invalid form token': 'Форма устарела. Обновите страницу и отправьте заявку ещё раз.',
+  'form token expired': 'Форма устарела. Обновите страницу и отправьте заявку ещё раз.',
+  'form submitted too fast':
+    'Форма отправлена слишком быстро. Подождите пару секунд и попробуйте ещё раз.',
+  'too many links': 'Слишком много ссылок в описании. Оставьте не больше двух.',
+  'description must be in russian': 'Опишите задачу на русском языке.',
+  'consent required': 'Нужно согласие на передачу запроса подрядчикам.',
+  'category not found': 'Категория не найдена.',
+  'lead not found': 'Заявка не найдена.',
+  'outreach message not found': 'Письмо не найдено.',
+  'outreach message already processed': 'Это письмо уже отправлено или пропущено.',
+  'recipient unsubscribed': 'Получатель отписался от писем — отправка запрещена.',
+  'recipient e-mail is empty': 'Не указан адрес получателя.',
+  'draft for this provider already exists': 'Для этой компании черновик уже есть.',
+  'invalid unsubscribe link': 'Ссылка для отписки недействительна.',
 };
 
 const STATUS_DEFAULT: Record<number, string> = {
@@ -79,7 +95,9 @@ export type ErrorContext =
   | 'chat-send'
   | 'chat-socket'
   | 'provider-update'
-  | 'admin-fetch';
+  | 'admin-fetch'
+  | 'lead-submit'
+  | 'outreach';
 
 const CONTEXT_FALLBACK: Record<ErrorContext, string> = {
   generic: 'Что-то пошло не так. Попробуйте ещё раз.',
@@ -95,6 +113,8 @@ const CONTEXT_FALLBACK: Record<ErrorContext, string> = {
   'chat-socket': 'Потеряно соединение с чатом. Переподключаемся…',
   'provider-update': 'Не удалось сохранить изменения. Попробуйте ещё раз.',
   'admin-fetch': 'Не удалось загрузить данные. Попробуйте ещё раз.',
+  'lead-submit': 'Не удалось отправить заявку. Попробуйте ещё раз.',
+  outreach: 'Не удалось выполнить действие с письмом. Попробуйте ещё раз.',
 };
 
 function matchKnownDetail(detail: string): string | null {
