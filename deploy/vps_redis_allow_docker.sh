@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Allow the ozzb2b Docker containers to reach the host Redis.
-# We bind Redis on all interfaces, enable protected-mode + requirepass, and
-# restrict access at the firewall level to Docker bridge interfaces only.
+# Containers reach the host via `host.docker.internal` (host-gateway =
+# docker0, 172.17.0.1), so Redis binds only to localhost + that address,
+# never the public IP. protected-mode + requirepass + UFW (Docker bridge
+# interfaces only) are kept as extra layers.
 set -euo pipefail
 
 REDIS_CONF="/etc/redis/redis.conf"
@@ -19,11 +21,15 @@ fi
 # shellcheck disable=SC1090
 set -a; . "$SECRETS_FILE"; set +a
 
-log "binding redis on all interfaces (firewall restricted)"
+# docker0 may not exist yet when Redis starts at boot; allow binding to it anyway.
+echo "net.ipv4.ip_nonlocal_bind = 1" > /etc/sysctl.d/60-db-bind-docker0.conf
+sysctl -q -p /etc/sysctl.d/60-db-bind-docker0.conf
+
+log "binding redis on localhost + docker0"
 if grep -qE '^[^#]*bind ' "$REDIS_CONF"; then
-    sed -i -E 's|^[[:space:]]*bind .*|bind 0.0.0.0 ::|' "$REDIS_CONF"
+    sed -i -E 's|^[[:space:]]*bind .*|bind 127.0.0.1 -::1 172.17.0.1|' "$REDIS_CONF"
 else
-    echo "bind 0.0.0.0 ::" >> "$REDIS_CONF"
+    echo "bind 127.0.0.1 -::1 172.17.0.1" >> "$REDIS_CONF"
 fi
 
 if grep -qE '^[^#]*protected-mode ' "$REDIS_CONF"; then
