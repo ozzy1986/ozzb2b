@@ -580,7 +580,8 @@ jobs:
             apps/events/go.sum
       - name: govulncheck chat
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          # Pinned: govulncheck >= 1.8.0 requires Go 1.26.
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
           govulncheck ./...
         working-directory: apps/chat
       - name: govulncheck events
