@@ -156,8 +156,26 @@ else
     log "monitoring disabled (set OZZB2B_MONITORING=1 to deploy it)"
 fi
 
-log "docker compose up --build"
-docker compose "${compose_args[@]}" up -d --build
+# Build one service at a time: a parallel `up --build` (Go x2 + Rust +
+# Next.js at once) exhausts RAM+swap on this shared 1-vCPU VPS and the OOM
+# killer starts taking down other sites' databases. Wait for headroom first.
+build_images() {
+    local svc avail
+    for svc in $(docker compose "${compose_args[@]}" config --services); do
+        for _ in $(seq 1 60); do
+            avail=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+            [ "$avail" -ge 1200 ] && break
+            log "waiting for memory before building $svc (${avail} MB available)"
+            sleep 10
+        done
+        log "build $svc"
+        docker compose "${compose_args[@]}" build "$svc"
+    done
+}
+
+build_images
+log "docker compose up"
+docker compose "${compose_args[@]}" up -d
 
 if [ "$OZZB2B_MONITORING" = "1" ]; then
     log "synchronize Grafana admin password"
@@ -221,7 +239,8 @@ if [ -f "$post_deploy_smoke" ]; then
     if ! bash "$post_deploy_smoke"; then
         log "smoke failed; rolling back to previous git ref"
         git reset --hard HEAD@{1} || true
-        docker compose "${compose_args[@]}" up -d --build
+        build_images
+        docker compose "${compose_args[@]}" up -d
         exit 1
     fi
 fi
