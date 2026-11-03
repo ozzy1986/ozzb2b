@@ -53,6 +53,7 @@ const DETAIL_MAP: Record<string, string> = {
   'lead not found': 'Заявка не найдена.',
   'outreach message not found': 'Письмо не найдено.',
   'outreach message already processed': 'Это письмо уже отправлено или пропущено.',
+  'outreach message already sent': 'Отправленное письмо удалить нельзя.',
   'recipient unsubscribed': 'Получатель отписался от писем — отправка запрещена.',
   'recipient e-mail is empty': 'Не указан адрес получателя.',
   'draft for this provider already exists': 'Для этой компании черновик уже есть.',
@@ -177,6 +178,11 @@ export function humanizeError(
     }
   }
   return CONTEXT_FALLBACK[context];
+}
+
+/** Russian text for a raw API `detail` string (e.g. a per-item bulk error). */
+export function humanizeDetail(detail: string, context: ErrorContext = 'generic'): string {
+  return matchKnownDetail(detail) ?? CONTEXT_FALLBACK[context];
 }
 
 /** True for ApiError with the given HTTP status. Useful for redirect flows. */

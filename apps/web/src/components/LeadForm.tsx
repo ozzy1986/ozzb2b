@@ -83,7 +83,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
   return (
     <form onSubmit={onSubmit} className="sidebar-card form-card" style={{ display: 'grid', gap: 12 }}>
       <label>
-        <div>Что нужно</div>
+        <div className="req">Что нужно</div>
         <select
           name="category_slug"
           value={fields.category_slug}
@@ -98,7 +98,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
         </select>
       </label>
       <label>
-        <div>Опишите задачу</div>
+        <div className="req">Опишите задачу</div>
         <textarea
           name="description"
           rows={6}
@@ -127,7 +127,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
           </select>
         </label>
         <label>
-          <div>Бюджет (необязательно)</div>
+          <div>Бюджет</div>
           <input
             name="budget"
             maxLength={120}
@@ -139,7 +139,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
       </div>
       <div className="lead-form-row">
         <label>
-          <div>Как к вам обращаться</div>
+          <div className="req">Как к вам обращаться</div>
           <input
             name="contact_name"
             required
@@ -151,7 +151,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
           />
         </label>
         <label>
-          <div>Компания или ИП (необязательно)</div>
+          <div>Компания или ИП</div>
           <input
             name="company_name"
             maxLength={255}
@@ -163,7 +163,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
       </div>
       <div className="lead-form-row">
         <label>
-          <div>Электронная почта</div>
+          <div className="req">Электронная почта</div>
           <input
             type="email"
             name="contact_email"
@@ -175,7 +175,7 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
           />
         </label>
         <label>
-          <div>Телефон (необязательно)</div>
+          <div>Телефон</div>
           <input
             type="tel"
             name="contact_phone"
@@ -207,11 +207,14 @@ export function LeadForm({ categories, cities, defaultCategory }: Props) {
           required
           style={{ width: 'auto', marginTop: 4 }}
         />
-        <span>
+        <span className="req">
           Согласен, что описание задачи будет передано подходящим подрядчикам, а мои контакты —
           тем, кто откликнется.
         </span>
       </label>
+      <p className="form-legend">
+        <span aria-hidden="true">*</span> — обязательные поля
+      </p>
       <div>
         <button type="submit" className="contact-cta" disabled={pending || !token}>
           {pending ? 'Отправляем...' : 'Отправить заявку'}

@@ -4,25 +4,70 @@ import { useState } from 'react';
 import Link from '@/components/AppLink';
 import {
   addOutreach,
+  bulkOutreach,
   sendOutreach,
   skipOutreach,
   updateLead,
   updateOutreach,
+  type OutreachBulkAction,
 } from '@/lib/api';
-import { humanizeError } from '@/lib/errors';
+import { humanizeDetail, humanizeError } from '@/lib/errors';
 import { LEAD_STATUS_LABEL, OUTREACH_STATUS_LABEL } from '@/lib/leads';
 import type { LeadDetail, LeadStatus, OutreachMessage } from '@/lib/types';
 import { ErrorAlert } from './ErrorAlert';
 
+type Draft = { to_email: string; subject: string; body: string };
+
+function draftOf(m: OutreachMessage): Draft {
+  return { to_email: m.to_email, subject: m.subject, body: m.body };
+}
+
+function isDirty(m: OutreachMessage, d: Draft | undefined): boolean {
+  return !!d && (d.to_email !== m.to_email || d.subject !== m.subject || d.body !== m.body);
+}
+
+const isEditable = (m: OutreachMessage) => m.status === 'draft' || m.status === 'failed';
+// Sent messages stay as a record of what went out.
+const isSelectable = (m: OutreachMessage) => m.status !== 'sent';
+
 export function LeadReview({ initial }: { initial: LeadDetail }) {
   const [lead, setLead] = useState(initial);
   const [messages, setMessages] = useState<OutreachMessage[]>(initial.outreach);
+  // Unsaved edits live here (not in each editor) so bulk send can save them first.
+  const [edits, setEdits] = useState<Record<string, Draft>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [note, setNote] = useState(initial.admin_note ?? '');
   const [providerSlug, setProviderSlug] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const selectable = messages.filter(isSelectable);
+  const chosen = messages.filter((m) => selected.has(m.id) && isSelectable(m));
+  const chosenSendable = chosen.filter(isEditable);
+  const allChosen = selectable.length > 0 && chosen.length === selectable.length;
 
   function replace(updated: OutreachMessage) {
     setMessages((list) => list.map((m) => (m.id === updated.id ? updated : m)));
+    setEdits(({ [updated.id]: _, ...rest }) => rest);
+    if (!isSelectable(updated)) toggle(updated.id, false);
+  }
+
+  function edit(id: string, draft: Draft) {
+    setEdits((all) => ({ ...all, [id]: draft }));
+  }
+
+  function toggle(id: string, on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAll(on: boolean) {
+    setSelected(on ? new Set(selectable.map((m) => m.id)) : new Set());
   }
 
   async function saveLead(patch: { status?: LeadStatus; admin_note?: string }) {
@@ -46,6 +91,55 @@ export function LeadReview({ initial }: { initial: LeadDetail }) {
       setProviderSlug('');
     } catch (err) {
       setError(humanizeError(err, 'outreach'));
+    }
+  }
+
+  async function runBulk(action: OutreachBulkAction) {
+    const targets = action === 'send' ? chosenSendable : chosen;
+    if (targets.length === 0) return;
+    const question =
+      action === 'send'
+        ? `Отправить писем: ${targets.length}?`
+        : `Удалить писем: ${targets.length}? Это нельзя отменить.`;
+    if (!window.confirm(question)) return;
+
+    setError(null);
+    setNotice(null);
+    setBulkBusy(true);
+    try {
+      if (action === 'send') {
+        for (const m of targets) {
+          const d = edits[m.id];
+          if (isDirty(m, d)) replace(await updateOutreach(m.id, d!));
+        }
+      }
+      const results = await bulkOutreach(
+        lead.id,
+        action,
+        targets.map((m) => m.id),
+      );
+      const removed = new Set<string>();
+      const problems: string[] = [];
+      for (const r of results) {
+        if (r.message) replace(r.message);
+        if (action === 'delete' && r.ok) removed.add(r.id);
+        if (!r.ok) {
+          const name = messages.find((m) => m.id === r.id)?.provider.display_name ?? r.id;
+          // Send failures keep the SMTP text on the card; domain errors get translated.
+          problems.push(`${name}: ${r.message ? 'ошибка отправки' : humanizeDetail(r.error ?? '', 'outreach')}`);
+        }
+      }
+      if (removed.size > 0) {
+        setMessages((list) => list.filter((m) => !removed.has(m.id)));
+        setSelected((prev) => new Set([...prev].filter((id) => !removed.has(id))));
+      }
+      const done = results.length - problems.length;
+      setNotice(action === 'send' ? `Отправлено: ${done}.` : `Удалено: ${done}.`);
+      if (problems.length > 0) setError(`Не получилось (${problems.length}): ${problems.join('; ')}`);
+    } catch (err) {
+      setError(humanizeError(err, 'outreach'));
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -98,17 +192,61 @@ export function LeadReview({ initial }: { initial: LeadDetail }) {
         </div>
       </section>
 
-      <ErrorAlert message={error} />
-
       <section style={{ display: 'grid', gap: 16 }}>
         <h2>Письма подрядчикам ({messages.length})</h2>
+        {selectable.length > 0 ? (
+          <div className="sidebar-card bulk-bar">
+            <label className="bulk-check">
+              <input
+                type="checkbox"
+                checked={allChosen}
+                onChange={(e) => toggleAll(e.target.checked)}
+                disabled={bulkBusy}
+              />
+              Выбрать все
+            </label>
+            <span className="bulk-count">Выбрано: {chosen.length}</span>
+            <button
+              type="button"
+              className="contact-cta"
+              disabled={bulkBusy || chosenSendable.length === 0}
+              onClick={() => runBulk('send')}
+            >
+              {bulkBusy ? 'Выполняем...' : `Отправить (${chosenSendable.length})`}
+            </button>
+            <button
+              type="button"
+              className="chip"
+              disabled={bulkBusy || chosen.length === 0}
+              onClick={() => runBulk('delete')}
+            >
+              Удалить ({chosen.length})
+            </button>
+          </div>
+        ) : null}
+        {notice ? (
+          <div className="auth-hint" role="status">
+            {notice}
+          </div>
+        ) : null}
+        <ErrorAlert message={error} />
         {messages.length === 0 ? (
           <div className="empty">
             Подходящих компаний с почтой не нашлось. Добавьте компанию вручную ниже.
           </div>
         ) : (
           messages.map((m) => (
-            <OutreachEditor key={m.id} message={m} onChange={replace} onError={setError} />
+            <OutreachEditor
+              key={m.id}
+              message={m}
+              draft={edits[m.id] ?? draftOf(m)}
+              selected={selected.has(m.id)}
+              locked={bulkBusy}
+              onSelect={(on) => toggle(m.id, on)}
+              onEdit={(d) => edit(m.id, d)}
+              onChange={replace}
+              onError={setError}
+            />
           ))
         )}
         <form onSubmit={onAddProvider} className="sidebar-card form-card" style={{ display: 'grid', gap: 8 }}>
@@ -133,20 +271,27 @@ export function LeadReview({ initial }: { initial: LeadDetail }) {
 
 function OutreachEditor({
   message,
+  draft,
+  selected,
+  locked,
+  onSelect,
+  onEdit,
   onChange,
   onError,
 }: {
   message: OutreachMessage;
+  draft: Draft;
+  selected: boolean;
+  locked: boolean;
+  onSelect: (on: boolean) => void;
+  onEdit: (d: Draft) => void;
   onChange: (m: OutreachMessage) => void;
   onError: (e: string | null) => void;
 }) {
-  const [toEmail, setToEmail] = useState(message.to_email);
-  const [subject, setSubject] = useState(message.subject);
-  const [body, setBody] = useState(message.body);
   const [pending, setPending] = useState(false);
-  const editable = message.status === 'draft' || message.status === 'failed';
-  const dirty =
-    toEmail !== message.to_email || subject !== message.subject || body !== message.body;
+  const editable = isEditable(message);
+  const dirty = isDirty(message, draft);
+  const busy = pending || locked;
 
   async function run(action: () => Promise<OutreachMessage>) {
     onError(null);
@@ -161,27 +306,39 @@ function OutreachEditor({
   }
 
   async function save(): Promise<OutreachMessage> {
-    return updateOutreach(message.id, { to_email: toEmail, subject, body });
+    return updateOutreach(message.id, draft);
   }
 
   async function saveAndSend(): Promise<OutreachMessage> {
-    if (dirty) await save();
+    if (dirty) onChange(await save());
     return sendOutreach(message.id);
   }
 
   return (
     <article className="sidebar-card form-card" style={{ display: 'grid', gap: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <strong>
-          <Link href={`/providers/${message.provider.slug}`}>{message.provider.display_name}</Link>
-          {message.provider.website ? (
-            <>
-              {' · '}
-              <a href={message.provider.website} target="_blank" rel="noopener noreferrer">
-                сайт
-              </a>
-            </>
+        <strong style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {isSelectable(message) ? (
+            <input
+              type="checkbox"
+              aria-label={`Выбрать: ${message.provider.display_name}`}
+              checked={selected}
+              disabled={locked}
+              onChange={(e) => onSelect(e.target.checked)}
+              style={{ width: 'auto' }}
+            />
           ) : null}
+          <span>
+            <Link href={`/providers/${message.provider.slug}`}>{message.provider.display_name}</Link>
+            {message.provider.website ? (
+              <>
+                {' · '}
+                <a href={message.provider.website} target="_blank" rel="noopener noreferrer">
+                  сайт
+                </a>
+              </>
+            ) : null}
+          </span>
         </strong>
         <span className="chip">
           {OUTREACH_STATUS_LABEL[message.status]}
@@ -193,17 +350,17 @@ function OutreachEditor({
         <div>Кому</div>
         <input
           type="email"
-          value={toEmail}
-          onChange={(e) => setToEmail(e.target.value)}
+          value={draft.to_email}
+          onChange={(e) => onEdit({ ...draft, to_email: e.target.value })}
           disabled={!editable}
         />
       </label>
       <label>
         <div>Тема</div>
         <input
-          value={subject}
+          value={draft.subject}
           maxLength={255}
-          onChange={(e) => setSubject(e.target.value)}
+          onChange={(e) => onEdit({ ...draft, subject: e.target.value })}
           disabled={!editable}
         />
       </label>
@@ -211,8 +368,8 @@ function OutreachEditor({
         <div>Текст</div>
         <textarea
           rows={14}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          value={draft.body}
+          onChange={(e) => onEdit({ ...draft, body: e.target.value })}
           disabled={!editable}
         />
       </label>
@@ -221,20 +378,20 @@ function OutreachEditor({
           <button
             type="button"
             className="contact-cta"
-            disabled={pending}
+            disabled={busy}
             onClick={() => {
-              if (window.confirm(`Отправить письмо на ${toEmail}?`)) void run(saveAndSend);
+              if (window.confirm(`Отправить письмо на ${draft.to_email}?`)) void run(saveAndSend);
             }}
           >
             {pending ? 'Отправляем...' : 'Отправить'}
           </button>
-          <button type="button" className="chip" disabled={pending || !dirty} onClick={() => run(save)}>
+          <button type="button" className="chip" disabled={busy || !dirty} onClick={() => run(save)}>
             Сохранить черновик
           </button>
           <button
             type="button"
             className="chip"
-            disabled={pending}
+            disabled={busy}
             onClick={() => run(() => skipOutreach(message.id))}
           >
             Не отправлять

@@ -161,6 +161,13 @@ export type OutreachMessage = {
   updated_at: string;
 };
 
+export type OutreachBulkResult = {
+  id: string;
+  ok: boolean;
+  error: string | null;
+  message: OutreachMessage | null;
+};
+
 export type LeadDetail = LeadSummary & {
   budget: string | null;
   contact_email: string;

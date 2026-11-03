@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Respons
 
 from ozzb2b_api.config import get_settings
 from ozzb2b_api.db.models import Lead, OutreachStatus, User, UserRole
-from ozzb2b_api.errors import ForbiddenError, ValidationError
+from ozzb2b_api.errors import DomainError, ForbiddenError, NotFoundError, ValidationError
 from ozzb2b_api.routes.deps import DbSession, get_current_user
 from ozzb2b_api.schemas.leads import (
     LeadCreateRequest,
@@ -19,6 +19,9 @@ from ozzb2b_api.schemas.leads import (
     LeadSummary,
     LeadUpdateRequest,
     OutreachAddRequest,
+    OutreachBulkItem,
+    OutreachBulkRequest,
+    OutreachBulkResponse,
     OutreachPublic,
     OutreachUpdateRequest,
     UnsubscribeRequest,
@@ -94,6 +97,7 @@ async def create_lead(
         ),
         cfg,
     )
+    background.add_task(leads_service.send_quietly, leads_service.client_confirmation(lead, cfg))
     mail = leads_service.admin_notification(lead, drafts, cfg)
     if mail is not None:
         background.add_task(leads_service.send_quietly, mail)
@@ -155,9 +159,7 @@ async def get_lead(lead_id: uuid.UUID, db: DbSession, _admin: AdminUser) -> Lead
 async def update_lead(
     lead_id: uuid.UUID, payload: LeadUpdateRequest, db: DbSession, _admin: AdminUser
 ) -> LeadDetail:
-    await leads_service.update_lead(
-        db, lead_id, status=payload.status, note=payload.admin_note
-    )
+    await leads_service.update_lead(db, lead_id, status=payload.status, note=payload.admin_note)
     return _detail(await leads_service.get_lead(db, lead_id))
 
 
@@ -169,6 +171,35 @@ async def add_outreach(
 ) -> OutreachPublic:
     msg = await leads_service.add_draft(db, lead_id, payload.provider_slug)
     return OutreachPublic.model_validate(msg)
+
+
+@admin_router.post("/{lead_id}/outreach/bulk", response_model=OutreachBulkResponse)
+async def bulk_outreach(
+    lead_id: uuid.UUID, payload: OutreachBulkRequest, db: DbSession, _admin: AdminUser
+) -> OutreachBulkResponse:
+    """Apply one action to several messages; each item succeeds or fails on its own."""
+    owned = await leads_service.lead_outreach_ids(db, lead_id)
+    results: list[OutreachBulkItem] = []
+    for outreach_id in dict.fromkeys(payload.ids):
+        try:
+            if outreach_id not in owned:
+                raise NotFoundError("outreach message not found")
+            if payload.action == "send":
+                msg = await leads_service.send_outreach(db, outreach_id)
+                results.append(
+                    OutreachBulkItem(
+                        id=outreach_id,
+                        ok=msg.error is None,
+                        error=msg.error,
+                        message=OutreachPublic.model_validate(msg),
+                    )
+                )
+            else:
+                await leads_service.delete_outreach(db, outreach_id)
+                results.append(OutreachBulkItem(id=outreach_id, ok=True))
+        except DomainError as exc:
+            results.append(OutreachBulkItem(id=outreach_id, ok=False, error=str(exc)))
+    return OutreachBulkResponse(results=results)
 
 
 @admin_router.patch("/outreach/{outreach_id}", response_model=OutreachPublic)
@@ -186,16 +217,12 @@ async def update_outreach(
 
 
 @admin_router.post("/outreach/{outreach_id}/send", response_model=OutreachPublic)
-async def send_outreach(
-    outreach_id: uuid.UUID, db: DbSession, _admin: AdminUser
-) -> OutreachPublic:
+async def send_outreach(outreach_id: uuid.UUID, db: DbSession, _admin: AdminUser) -> OutreachPublic:
     msg = await leads_service.send_outreach(db, outreach_id)
     return OutreachPublic.model_validate(msg)
 
 
 @admin_router.post("/outreach/{outreach_id}/skip", response_model=OutreachPublic)
-async def skip_outreach(
-    outreach_id: uuid.UUID, db: DbSession, _admin: AdminUser
-) -> OutreachPublic:
+async def skip_outreach(outreach_id: uuid.UUID, db: DbSession, _admin: AdminUser) -> OutreachPublic:
     msg = await leads_service.skip_outreach(db, outreach_id)
     return OutreachPublic.model_validate(msg)

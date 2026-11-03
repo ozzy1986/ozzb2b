@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from './api';
-import { humanizeError, isApiErrorStatus } from './errors';
+import { humanizeDetail, humanizeError, isApiErrorStatus } from './errors';
 
 describe('humanizeError', () => {
   it('maps known English API details to Russian', () => {
@@ -100,6 +100,17 @@ describe('humanizeError lead form', () => {
     );
     expect(humanizeError(new ApiError(409, 'recipient unsubscribed'), 'outreach')).toContain(
       'отписался',
+    );
+  });
+});
+
+describe('humanizeDetail', () => {
+  it('translates known bulk item errors and falls back by context', () => {
+    expect(humanizeDetail('outreach message already sent', 'outreach')).toBe(
+      'Отправленное письмо удалить нельзя.',
+    );
+    expect(humanizeDetail('something odd', 'outreach')).toBe(
+      'Не удалось выполнить действие с письмом. Попробуйте ещё раз.',
     );
   });
 });

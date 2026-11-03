@@ -134,6 +134,17 @@ def test_admin_notification_links_to_review_page(cfg: Settings) -> None:
     assert "Черновиков писем подрядчикам: 3" in mail.body
 
 
+def test_client_confirmation_does_not_echo_free_text(cfg: Settings) -> None:
+    lead = _lead(description="Купите наш курс http://spam.example бухгалтер")
+    mail = leads_service.client_confirmation(lead, cfg)
+    assert mail.to == "anna@client.ru"
+    assert "Анна" in mail.body
+    assert "Казань" in mail.body
+    assert "может и не найтись" in mail.body
+    assert "spam.example" not in mail.body
+    assert mail.reply_to == "owner@example.com"
+
+
 def test_admin_notification_disabled_without_address(cfg: Settings) -> None:
     off = cfg.model_copy(update={"admin_notify_email": ""})
     assert leads_service.admin_notification(_lead(), 0, off) is None
@@ -170,9 +181,7 @@ async def test_send_mail_disabled_never_connects(
     await mailer.send_mail(OutgoingMail(to="a@b.ru", subject="s", body="b"), cfg)
 
 
-async def test_send_mail_wraps_smtp_errors(
-    cfg: Settings, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_send_mail_wraps_smtp_errors(cfg: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
     def fail(*_: Any) -> None:
         raise smtplib.SMTPAuthenticationError(535, b"bad credentials")
 
@@ -246,6 +255,7 @@ def test_unsubscribe_rejects_bad_token(client: TestClient) -> None:
         ("GET", "/admin/leads"),
         ("GET", f"/admin/leads/{uuid.uuid4()}"),
         ("POST", f"/admin/leads/outreach/{uuid.uuid4()}/send"),
+        ("POST", f"/admin/leads/{uuid.uuid4()}/outreach/bulk"),
     ],
 )
 def test_admin_lead_routes_require_auth(client: TestClient, method: str, path: str) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -97,3 +98,20 @@ class OutreachUpdateRequest(BaseModel):
 
 class OutreachAddRequest(BaseModel):
     provider_slug: str = Field(min_length=1, max_length=160)
+
+
+class OutreachBulkRequest(BaseModel):
+    action: Literal["send", "delete"]
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+
+
+class OutreachBulkItem(BaseModel):
+    id: uuid.UUID
+    ok: bool
+    error: str | None = None
+    # Updated message for "send"; None when it was deleted or the action failed.
+    message: OutreachPublic | None = None
+
+
+class OutreachBulkResponse(BaseModel):
+    results: list[OutreachBulkItem]

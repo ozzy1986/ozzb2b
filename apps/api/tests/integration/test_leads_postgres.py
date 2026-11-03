@@ -12,10 +12,12 @@ from ozzb2b_api.db.models import (
     City,
     Country,
     EmailSuppression,
+    Lead,
     OutreachMessage,
     Provider,
     ProviderStatus,
 )
+from ozzb2b_api.schemas.leads import OutreachPublic
 from ozzb2b_api.services import leads as leads_service
 
 pytestmark = pytest.mark.integration
@@ -62,15 +64,12 @@ async def _seed(db: AsyncSession) -> tuple[Category, City]:
     return root, kazan
 
 
-async def test_lead_drafts_match_city_first_and_skip_unreachable(
-    db_session: AsyncSession, integration_settings: Settings
-) -> None:
-    _, kazan = await _seed(db_session)
-    lead, drafts = await leads_service.create_lead(
-        db_session,
+async def _lead(db: AsyncSession, cfg: Settings, city: City) -> Lead:
+    lead, _ = await leads_service.create_lead(
+        db,
         leads_service.LeadInput(
             category_slug="accounting",
-            city_id=kazan.id,
+            city_id=city.id,
             description="Нужен бухгалтер для селлера на Ozon",
             budget=None,
             contact_name="Иван",
@@ -80,16 +79,27 @@ async def test_lead_drafts_match_city_first_and_skip_unreachable(
             source_ip="203.0.113.5",
             user_agent="pytest",
         ),
-        integration_settings,
+        cfg,
     )
-    assert drafts == 2
+    return lead
+
+
+async def test_lead_drafts_match_city_first_and_skip_unreachable(
+    db_session: AsyncSession, integration_settings: Settings
+) -> None:
+    _, kazan = await _seed(db_session)
+    lead = await _lead(db_session, integration_settings, kazan)
     assert lead.contact_email == "ivan@client.ru"
 
     rows = (
-        await db_session.execute(
-            select(OutreachMessage).where(OutreachMessage.lead_id == lead.id)
+        (
+            await db_session.execute(
+                select(OutreachMessage).where(OutreachMessage.lead_id == lead.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert sorted(m.to_email for m in rows) == ["info@a-kazan.ru", "info@b-moscow.ru"]
 
     matched = await leads_service.match_providers(db_session, lead, limit=5)
@@ -103,8 +113,36 @@ async def test_unsubscribe_is_idempotent(
     await leads_service.unsubscribe(db_session, "Info@Buh.ru", token, integration_settings)
     await leads_service.unsubscribe(db_session, "info@buh.ru", token, integration_settings)
     rows = (
-        await db_session.execute(
-            select(EmailSuppression).where(EmailSuppression.email == "info@buh.ru")
+        (
+            await db_session.execute(
+                select(EmailSuppression).where(EmailSuppression.email == "info@buh.ru")
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
+
+
+async def test_edited_draft_serialises_and_deletes(
+    db_session: AsyncSession, integration_settings: Settings
+) -> None:
+    # Regression: updated_at expired by the flush used to be lazy-loaded during
+    # response serialisation and crash with MissingGreenlet.
+    _, kazan = await _seed(db_session)
+    lead = await _lead(db_session, integration_settings, kazan)
+    ids = await leads_service.lead_outreach_ids(db_session, lead.id)
+    assert len(ids) == 2
+    first, second = sorted(ids)
+
+    msg = await leads_service.update_outreach(
+        db_session, first, to_email=None, subject="Новая тема", body=None
+    )
+    assert OutreachPublic.model_validate(msg).subject == "Новая тема"
+    skipped = await leads_service.skip_outreach(db_session, second)
+    assert OutreachPublic.model_validate(skipped).status == "skipped"
+
+    await leads_service.delete_outreach(db_session, first)
+    assert await leads_service.lead_outreach_ids(db_session, lead.id) == {second}
+    with pytest.raises(leads_service.OutreachNotEditableError):
+        await leads_service.send_outreach(db_session, second, integration_settings)

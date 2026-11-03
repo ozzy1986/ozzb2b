@@ -47,7 +47,7 @@ export function OwnedProviderEditor({ initial }: Props) {
   return (
     <form onSubmit={onSubmit} className="sidebar-card" style={{ display: 'grid', gap: 12 }}>
       <label>
-        <div>Название</div>
+        <div className="req">Название</div>
         <input
           name="display_name"
           value={form.display_name ?? ''}

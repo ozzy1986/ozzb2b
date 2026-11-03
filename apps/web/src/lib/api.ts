@@ -10,6 +10,7 @@ import type {
   LeadStatus,
   LeadSummary,
   LegalForm,
+  OutreachBulkResult,
   OutreachMessage,
   ProviderDetail,
   ProviderListResponse,
@@ -528,4 +529,22 @@ export async function skipOutreach(id: string): Promise<OutreachMessage> {
   return fetchJson<OutreachMessage>(`/admin/leads/outreach/${encodeURIComponent(id)}/skip`, {
     method: 'POST',
   });
+}
+
+export type OutreachBulkAction = 'send' | 'delete';
+
+export async function bulkOutreach(
+  leadId: string,
+  action: OutreachBulkAction,
+  ids: string[],
+): Promise<OutreachBulkResult[]> {
+  const res = await fetchJson<{ results: OutreachBulkResult[] }>(
+    `/admin/leads/${encodeURIComponent(leadId)}/outreach/bulk`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action, ids }),
+    },
+  );
+  return res.results;
 }

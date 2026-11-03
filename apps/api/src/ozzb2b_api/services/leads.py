@@ -209,9 +209,7 @@ async def _suppressed(session: AsyncSession, email: str) -> bool:
     return row.first() is not None
 
 
-async def match_providers(
-    session: AsyncSession, lead: Lead, limit: int
-) -> list[Provider]:
+async def match_providers(session: AsyncSession, lead: Lead, limit: int) -> list[Provider]:
     """Providers in the lead's category (or its subcategories) we can e-mail."""
     if lead.category_id is None:
         return []
@@ -285,9 +283,7 @@ async def create_lead(
             )
         )
     await session.flush()
-    log.info(
-        "lead.created", lead_id=str(lead.id), category=category.slug, drafts=len(providers)
-    )
+    log.info("lead.created", lead_id=str(lead.id), category=category.slug, drafts=len(providers))
     return lead, len(providers)
 
 
@@ -300,8 +296,7 @@ def admin_notification(lead: Lead, drafts: int, cfg: Settings) -> OutgoingMail |
         f"Услуга: {need}",
         f"Город: {city_phrase(lead.city)}",
         f"Бюджет: {lead.budget or 'не указан'}",
-        f"Клиент: {lead.contact_name}"
-        + (f", {lead.company_name}" if lead.company_name else ""),
+        f"Клиент: {lead.contact_name}" + (f", {lead.company_name}" if lead.company_name else ""),
         f"Черновиков писем подрядчикам: {drafts}",
     ]
     text = "\n".join(
@@ -311,9 +306,9 @@ def admin_notification(lead: Lead, drafts: int, cfg: Settings) -> OutgoingMail |
     items = "".join(f"<li>{esc(line)}</li>" for line in summary)
     page = (
         '<div style="font-family:Arial,sans-serif;font-size:15px;color:#0f172a">'
-        "<h2 style=\"margin:0 0 12px\">Новая заявка на ozzb2b.com</h2>"
-        f"<ul style=\"padding-left:18px\">{items}</ul>"
-        f"<p style=\"white-space:pre-wrap\">{esc(lead.description)}</p>"
+        '<h2 style="margin:0 0 12px">Новая заявка на ozzb2b.com</h2>'
+        f'<ul style="padding-left:18px">{items}</ul>'
+        f'<p style="white-space:pre-wrap">{esc(lead.description)}</p>'
         f'<p><a href="{esc(url)}" style="display:inline-block;padding:12px 20px;'
         "background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;"
         'font-weight:bold">Проверить и отправить письма</a></p>'
@@ -327,12 +322,42 @@ def admin_notification(lead: Lead, drafts: int, cfg: Settings) -> OutgoingMail |
     )
 
 
+def client_confirmation(lead: Lead, cfg: Settings) -> OutgoingMail:
+    """Receipt for the client. Echoes none of the free text: the address is
+    unverified, so the form must not become a relay for arbitrary content."""
+    need = category_phrase(lead.category)
+    text = "\n".join(
+        [
+            f"Здравствуйте, {lead.contact_name}!",
+            "",
+            f"Мы получили вашу заявку на ozzb2b.com: {need}, {city_phrase(lead.city)}.",
+            "",
+            "Сейчас подбираем подрядчиков под ваш запрос и отправляем им его описание. "
+            "Ваши контакты получат только те, кто откликнется, — они напишут вам сами.",
+            "",
+            "Подходящих подрядчиков может и не найтись. В этом случае мы тоже напишем, "
+            "чтобы вы не ждали зря.",
+            "",
+            "Если заявку отправляли не вы, просто проигнорируйте это письмо.",
+            "",
+            "--",
+            "ozzb2b.com",
+        ]
+    )
+    return OutgoingMail(
+        to=lead.contact_email,
+        subject="Заявка принята — подбираем подрядчиков",
+        body=text,
+        reply_to=cfg.admin_notify_email or None,
+    )
+
+
 async def send_quietly(mail: OutgoingMail, cfg: Settings | None = None) -> None:
     """Best effort: a failed notification must not lose the lead."""
     try:
         await mailer.send_mail(mail, cfg)
     except MailDeliveryError:
-        log.warning("lead.admin_notify_failed", to=mail.to)
+        log.warning("lead.mail_failed", to=mail.to)
 
 
 # --- admin -----------------------------------------------------------------
@@ -392,6 +417,18 @@ async def _get_outreach(session: AsyncSession, outreach_id: uuid.UUID) -> Outrea
     return msg
 
 
+async def _flush_outreach(session: AsyncSession, msg: OutreachMessage) -> OutreachMessage:
+    """Flush and reload DB-maintained timestamps.
+
+    ``updated_at`` is expired by the flush (``onupdate=now()``); reading it later
+    from sync code (Pydantic serialisation) would trigger a lazy load outside the
+    async greenlet and crash with MissingGreenlet.
+    """
+    await session.flush()
+    await session.refresh(msg, ["created_at", "updated_at"])
+    return msg
+
+
 def _ensure_editable(msg: OutreachMessage) -> None:
     if msg.status not in (OutreachStatus.DRAFT, OutreachStatus.FAILED):
         raise OutreachNotEditableError("outreach message already processed")
@@ -420,8 +457,7 @@ async def add_draft(
     )
     msg.provider = provider
     session.add(msg)
-    await session.flush()
-    return msg
+    return await _flush_outreach(session, msg)
 
 
 async def update_outreach(
@@ -440,16 +476,14 @@ async def update_outreach(
         msg.subject = subject.strip()
     if body is not None:
         msg.body = body
-    await session.flush()
-    return msg
+    return await _flush_outreach(session, msg)
 
 
 async def skip_outreach(session: AsyncSession, outreach_id: uuid.UUID) -> OutreachMessage:
     msg = await _get_outreach(session, outreach_id)
     _ensure_editable(msg)
     msg.status = OutreachStatus.SKIPPED
-    await session.flush()
-    return msg
+    return await _flush_outreach(session, msg)
 
 
 async def send_outreach(
@@ -475,13 +509,27 @@ async def send_outreach(
     except MailDeliveryError as exc:
         msg.status = OutreachStatus.FAILED
         msg.error = str(exc)[:2000]
-        await session.flush()
-        return msg
+        return await _flush_outreach(session, msg)
     msg.status = OutreachStatus.SENT
     msg.sent_at = datetime.now(tz=UTC)
     msg.error = None
+    return await _flush_outreach(session, msg)
+
+
+async def delete_outreach(session: AsyncSession, outreach_id: uuid.UUID) -> None:
+    """Drop a message that never went out; sent ones stay as a record."""
+    msg = await _get_outreach(session, outreach_id)
+    if msg.status == OutreachStatus.SENT:
+        raise OutreachNotEditableError("outreach message already sent")
+    await session.delete(msg)
     await session.flush()
-    return msg
+
+
+async def lead_outreach_ids(session: AsyncSession, lead_id: uuid.UUID) -> set[uuid.UUID]:
+    rows = await session.execute(
+        select(OutreachMessage.id).where(OutreachMessage.lead_id == lead_id)
+    )
+    return set(rows.scalars())
 
 
 async def unsubscribe(

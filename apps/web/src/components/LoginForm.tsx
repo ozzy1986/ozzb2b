@@ -38,7 +38,7 @@ export function LoginForm() {
     <form className="auth-form" onSubmit={onSubmit} noValidate>
       <h1>Вход</h1>
       <label>
-        Электронная почта
+        <span className="req">Электронная почта</span>
         <input
           type="email"
           name="email"
@@ -49,7 +49,7 @@ export function LoginForm() {
         />
       </label>
       <label>
-        Пароль
+        <span className="req">Пароль</span>
         <input
           type="password"
           name="password"

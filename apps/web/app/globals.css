@@ -792,6 +792,20 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Required-field marker: the input itself carries `required` for assistive tech. */
+.req::after {
+  content: ' *';
+  color: var(--danger);
+}
+.form-legend {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.form-legend span {
+  color: var(--danger);
+}
+
 /* Lead request form and admin outreach editor */
 .form-card label {
   display: flex;
@@ -829,4 +843,31 @@ a:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
+}
+
+/* Admin outreach: bulk actions over selected drafts */
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 72px;
+  z-index: 5;
+}
+.bulk-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.bulk-count {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-right: auto;
+}
+.bulk-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -53,7 +53,7 @@ export function RegisterForm() {
         />
       </label>
       <label>
-        Электронная почта
+        <span className="req">Электронная почта</span>
         <input
           type="email"
           name="email"
@@ -64,7 +64,7 @@ export function RegisterForm() {
         />
       </label>
       <label>
-        Пароль
+        <span className="req">Пароль</span>
         <input
           type="password"
           name="password"

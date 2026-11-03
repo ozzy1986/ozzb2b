@@ -133,6 +133,10 @@
   ],
   [
     "POST",
+    "/admin/leads/{lead_id}/outreach/bulk"
+  ],
+  [
+    "POST",
     "/admin/scrape"
   ],
   [
