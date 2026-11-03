@@ -1,8 +1,17 @@
 import type { Metadata, Viewport } from 'next';
+import { Onest } from 'next/font/google';
 import Link from '@/components/AppLink';
 import type { ReactNode } from 'react';
 import { SiteNav } from '@/components/SiteNav';
 import './globals.css';
+
+// Onest: a calm modern grotesque drawn for Cyrillic first.
+const onest = Onest({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-onest',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://ozzb2b.com'),
@@ -22,19 +31,19 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#f3f5f2',
   width: 'device-width',
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ru">
+    <html lang="ru" className={onest.variable}>
       <body>
         <header className="site-header">
           <div className="container header-inner">
             <Link href="/" className="brand">
-              <span className="brand-mark" aria-hidden>◎</span>
+              <BrandMark />
               <span>ozzb2b</span>
             </Link>
             <SiteNav />
@@ -43,13 +52,41 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <main className="container site-main">{children}</main>
         <footer className="site-footer">
           <div className="container footer-inner">
-            <span>© {new Date().getFullYear()} ozzb2b</span>
-            <span>
-              <Link href="/sitemap.xml">карта сайта</Link> · <Link href="/robots.txt">robots</Link>
-            </span>
+            <div>
+              <Link href="/" className="brand">
+                <BrandMark />
+                <span>ozzb2b</span>
+              </Link>
+              <p>Соединяем бизнес с подрядчиками, которые ему действительно подходят.</p>
+            </div>
+            <nav className="footer-col" aria-label="Каталог">
+              <h4>Каталог</h4>
+              <Link href="/providers">Компании</Link>
+              <Link href="/categories">Категории</Link>
+              <Link href="/request">Оставить заявку</Link>
+            </nav>
+            <nav className="footer-col" aria-label="Подрядчикам">
+              <h4>Подрядчикам</h4>
+              <Link href="/register">Регистрация</Link>
+              <Link href="/login">Вход</Link>
+              <Link href="/sitemap.xml">Карта сайта</Link>
+            </nav>
           </div>
+          <div className="container footer-bottom">© {new Date().getFullYear()} ozzb2b</div>
         </footer>
       </body>
     </html>
+  );
+}
+
+/** Two overlapping rings: two companies meeting. */
+function BrandMark() {
+  return (
+    <span className="brand-mark" aria-hidden>
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <circle cx="9.5" cy="13" r="6.75" stroke="currentColor" strokeWidth="2.5" />
+        <circle cx="16.5" cy="13" r="6.75" stroke="currentColor" strokeWidth="2.5" opacity="0.55" />
+      </svg>
+    </span>
   );
 }

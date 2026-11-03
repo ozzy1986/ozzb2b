@@ -14,7 +14,6 @@ export function SiteNav() {
     <nav className="site-nav" aria-label="Основная навигация">
       <Link href="/providers">Компании</Link>
       <Link href="/categories">Категории</Link>
-      <Link href="/request">Оставить заявку</Link>
       <Link href="/chat">Чаты</Link>
       {current.status === 'authenticated' &&
       (current.user.role === 'provider_owner' || current.user.role === 'admin') ? (
@@ -26,6 +25,9 @@ export function SiteNav() {
           <Link href="/admin/analytics">Аналитика</Link>
         </>
       ) : null}
+      <Link href="/request" className="nav-cta">
+        Оставить заявку
+      </Link>
     </nav>
   );
 }

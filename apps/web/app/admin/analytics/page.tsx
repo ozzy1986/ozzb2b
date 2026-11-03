@@ -71,7 +71,7 @@ export default async function AdminAnalyticsPage({
               href={`/admin/analytics?days=${d}`}
               className="chip"
               aria-current={d === days ? 'page' : undefined}
-              style={d === days ? { background: '#0f172a', color: '#fff' } : undefined}
+              style={d === days ? { background: 'var(--accent)', color: 'var(--on-accent)', borderColor: 'transparent' } : undefined}
             >
               {d === 1 ? 'За сутки' : `${d} дней`}
             </Link>

@@ -13,24 +13,32 @@ type Props = {
   legalForms?: string[];
 };
 
+// Stable defaults: fresh `[]` literals would change identity on every render
+// and re-trigger the suggestions effect in an endless loop.
+const DEFAULT_COUNTRIES = ['RU'];
+const NONE: string[] = [];
+
 export function ProviderSearchBox({
   currentQ = '',
-  countries = ['RU'],
-  categories = [],
-  cities = [],
-  legalForms = [],
+  countries = DEFAULT_COUNTRIES,
+  categories = NONE,
+  cities = NONE,
+  legalForms = NONE,
 }: Props) {
   const [q, setQ] = useState(currentQ);
   const [suggestions, setSuggestions] = useState<ProviderSuggestion[]>([]);
   const trimmed = q.trim();
+  // Callers often pass inline array literals; key the memo on contents, not identity.
+  const paramsKey = JSON.stringify([countries, categories, cities, legalForms]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const suggestionParams = useMemo(
     () => ({ countries, categories, cities, legal_forms: legalForms }),
-    [categories, cities, countries, legalForms],
+    [paramsKey],
   );
 
   useEffect(() => {
     if (trimmed.length < 2) {
-      setSuggestions([]);
+      setSuggestions((prev) => (prev.length === 0 ? prev : []));
       return;
     }
     const timer = window.setTimeout(() => {

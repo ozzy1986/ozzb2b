@@ -58,7 +58,35 @@ export default async function RequestPage({
           Бесплатно и без регистрации.
         </p>
       </div>
-      <LeadForm categories={categories} cities={cityOptions} defaultCategory={defaultCategory} />
+      <div className="request-layout">
+        <LeadForm categories={categories} cities={cityOptions} defaultCategory={defaultCategory} />
+        <aside className="request-aside" aria-label="Что будет дальше">
+          <ol>
+            <li>
+              <span className="step-num">1</span>
+              <span>
+                <strong>Подбираем компании</strong>
+                Ищем подрядчиков под ваш запрос в каталоге — обычно в течение рабочего дня.
+              </span>
+            </li>
+            <li>
+              <span className="step-num">2</span>
+              <span>
+                <strong>Отправляем им запрос</strong>
+                Только описание задачи. Ваши имя, почта и телефон остаются у нас.
+              </span>
+            </li>
+            <li>
+              <span className="step-num">3</span>
+              <span>
+                <strong>Передаём контакты</strong>
+                Тем, кто откликнулся, — и они пишут вам напрямую.
+              </span>
+            </li>
+          </ol>
+          <div className="request-note">Бесплатно для вас и для подрядчиков. Без спама.</div>
+        </aside>
+      </div>
     </>
   );
 }
