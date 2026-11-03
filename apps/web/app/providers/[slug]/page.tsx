@@ -19,9 +19,16 @@ export async function generateMetadata({ params }: { params: RouteParams }): Pro
   const { slug } = await params;
   const p = await getProvider(slug);
   if (!p) return { title: 'Компания не найдена' };
+  const service = subcategories(p.categories)[0] ?? primaryCategories(p.categories)[0];
+  const qualifiers = [
+    service ? trCategory(service.slug, service.name) : null,
+    p.city ? trCity(p.city.name) : null,
+  ].filter(Boolean);
+  const title = qualifiers.length ? `${p.display_name} — ${qualifiers.join(', ')}` : p.display_name;
+  const fallback = `${p.display_name}: ${qualifiers.join(', ') || 'B2B-подрядчик'}. Контакты, услуги и заявка на ozzb2b.`;
   return {
-    title: p.display_name,
-    description: p.description?.slice(0, 180) ?? `B2B-компания — ${p.display_name}`,
+    title,
+    description: p.description?.slice(0, 180) ?? fallback,
     alternates: { canonical: `/providers/${p.slug}` },
     openGraph: {
       title: p.display_name,

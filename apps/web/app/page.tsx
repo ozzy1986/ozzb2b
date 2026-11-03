@@ -1,10 +1,41 @@
+import type { Metadata } from 'next';
 import Link from '@/components/AppLink';
 import { getCategoryTree, listProviders } from '@/lib/api';
 import { trCategory, trCategoryDescription, trCity, trCountry } from '@/lib/ru';
 import { primaryCategories } from '@/lib/categories';
 import { ProviderSearchBox } from '@/components/ProviderSearchBox';
+import { SITE_URL, jsonLd } from '@/lib/seo';
+
+const SITE_JSON_LD = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'ozzb2b',
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon.svg`,
+    description:
+      'Каталог B2B-подрядчиков в России и бесплатный подбор исполнителей по заявке.',
+    areaServed: 'RU',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'ozzb2b',
+    url: SITE_URL,
+    inLanguage: 'ru',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE_URL}/providers?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  },
+];
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 const STEPS = [
   {
@@ -37,8 +68,9 @@ export default async function HomePage() {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(SITE_JSON_LD)} />
       <section className="hero hero-home">
-        <Link href="/request?category=marketplace-accounting" className="hero-badge">
+        <Link href="/buhgalteriya-dlya-marketpleysov" className="hero-badge">
           <b>Новое</b>
           Бухгалтерия для селлеров Wildberries и Ozon →
         </Link>

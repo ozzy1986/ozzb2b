@@ -11,11 +11,6 @@ import { ProviderSearchBox } from '@/components/ProviderSearchBox';
 
 export const revalidate = 30;
 
-export const metadata: Metadata = {
-  title: 'Компании',
-  description: 'Каталог проверенных B2B-компаний в России с фильтрами и поиском.',
-};
-
 type SearchParams = {
   q?: string | string[];
   category?: string | string[];
@@ -28,6 +23,53 @@ type SearchParams = {
 function toList(v: string | string[] | undefined): string[] {
   if (v == null) return [];
   return Array.isArray(v) ? v : [v];
+}
+
+/** The one category this listing is about, when nothing else narrows it. */
+function singleCategory(params: SearchParams): string | null {
+  const categories = toList(params.category);
+  const countries = toList(params.country);
+  const narrowed =
+    params.q ||
+    toList(params.city).length > 0 ||
+    toList(params.legal_form).length > 0 ||
+    countries.some((c) => c !== 'RU') ||
+    (params.offset && params.offset !== '0');
+  return categories.length === 1 && !narrowed ? categories[0] : null;
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const category = singleCategory(params);
+  const hasFilters =
+    toList(params.category).length +
+      toList(params.city).length +
+      toList(params.legal_form).length >
+      0 ||
+    !!params.q ||
+    (!!params.offset && params.offset !== '0');
+
+  if (category) {
+    const name = trCategory(category, category);
+    return {
+      title: `${name} — компании в России`,
+      description: `${name}: подрядчики для бизнеса в России. Сравните компании, посмотрите контакты или оставьте заявку — подберём исполнителя бесплатно.`,
+      alternates: { canonical: `/providers?category=${encodeURIComponent(category)}` },
+    };
+  }
+  return {
+    title: 'Каталог B2B-подрядчиков в России',
+    description:
+      'Каталог компаний для бизнеса: бухгалтерия, юристы, IT, маркетинг и HR. Фильтры по услугам и городам, контакты и заявка на подбор.',
+    alternates: { canonical: '/providers' },
+    // Arbitrary filter / search / page combinations are near-duplicates:
+    // keep them out of the index but let crawlers follow through to companies.
+    robots: hasFilters ? { index: false, follow: true } : undefined,
+  };
 }
 
 export default async function ProvidersPage({
@@ -101,16 +143,24 @@ export default async function ProvidersPage({
     toList(params.legal_form).length +
     (q ? 1 : 0);
 
-  const crumbs: Crumb[] = [
-    { label: 'Главная', href: '/' },
-    { label: 'Компании' },
-  ];
+  const onlyCategory = singleCategory(params);
+  const heading = onlyCategory ? trCategory(onlyCategory, onlyCategory) : 'Компании';
+  const crumbs: Crumb[] = onlyCategory
+    ? [
+        { label: 'Главная', href: '/' },
+        { label: 'Компании', href: '/providers' },
+        { label: heading },
+      ]
+    : [
+        { label: 'Главная', href: '/' },
+        { label: 'Компании' },
+      ];
 
   return (
     <>
       <Breadcrumbs items={crumbs} />
       <div className="hero">
-        <h1>Компании</h1>
+        <h1>{heading}</h1>
         <p>
           {q
             ? `Результаты по запросу "${q}" — ${total} (${engineLabel})`

@@ -16,11 +16,11 @@ const onest = Onest({
 export const metadata: Metadata = {
   metadataBase: new URL('https://ozzb2b.com'),
   title: {
-    default: 'ozzb2b — маркетплейс B2B-исполнителей',
+    default: 'ozzb2b — подбор подрядчиков для бизнеса: бухгалтерия, юристы, IT',
     template: '%s — ozzb2b',
   },
   description:
-    'Платформа для поиска проверенных B2B-подрядчиков в России: ИТ, бухгалтерия, юридические и маркетинговые услуги.',
+    'Каталог B2B-подрядчиков в России и бесплатный подбор по заявке: бухгалтерия для маркетплейсов, юридические услуги, IT и маркетинг.',
   applicationName: 'ozzb2b',
   robots: { index: true, follow: true },
   openGraph: {
@@ -63,6 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <h4>Каталог</h4>
               <Link href="/providers">Компании</Link>
               <Link href="/categories">Категории</Link>
+              <Link href="/buhgalteriya-dlya-marketpleysov">Бухгалтерия для маркетплейсов</Link>
               <Link href="/request">Оставить заявку</Link>
             </nav>
             <nav className="footer-col" aria-label="Подрядчикам">
