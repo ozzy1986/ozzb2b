@@ -69,6 +69,13 @@ export function nicheCitySlugs(providers: ProviderSummary[]): string[] {
     .map(([slug]) => slug);
 }
 
+/** Cities with their own niche page, biggest first, with company counts. */
+export async function getNicheCities(): Promise<{ slug: string; count: number }[]> {
+  const providers = await listAllProviders({ categories: [NICHE.category] }).catch(() => []);
+  const byCity = groupByCity(providers);
+  return nicheCitySlugs(providers).map((slug) => ({ slug, count: byCity.get(slug)?.length ?? 0 }));
+}
+
 export function jsonLd(data: unknown): { __html: string } {
   // `<` escaped so a provider description can never close the script tag.
   return { __html: JSON.stringify(data).replace(/</g, '\\u003c') };

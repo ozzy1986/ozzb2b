@@ -129,6 +129,19 @@ export function NicheLanding({ providers, cities, city }: Props) {
             Смотреть компании ↓
           </a>
         </div>
+        {cities.length > 0 ? (
+          <nav className="hero-cities" aria-label="Бухгалтерия для маркетплейсов по городам">
+            <span>По городам:</span>
+            {geo ? <Link href={NICHE.path}>Вся Россия</Link> : null}
+            {cities
+              .filter((c) => c.slug !== city)
+              .map((c) => (
+                <Link key={c.slug} href={`${NICHE.path}/${c.slug}`}>
+                  {CITY_GEO[c.slug].name}
+                </Link>
+              ))}
+          </nav>
+        ) : null}
       </section>
 
       <section className="section" style={{ marginTop: 72 }}>

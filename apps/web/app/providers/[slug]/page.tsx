@@ -10,6 +10,7 @@ import { Breadcrumbs, type Crumb } from '@/components/Breadcrumbs';
 import { FreshnessBadge } from '@/components/FreshnessBadge';
 import { ClaimProviderButton } from '@/components/ClaimProviderButton';
 import { primaryCategories, subcategories } from '@/lib/categories';
+import { CITY_GEO, NICHE, getNicheCities } from '@/lib/seo';
 
 export const revalidate = 60;
 
@@ -73,6 +74,18 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
   const mainCategories = primaryCategories(p.categories);
   const specialties = subcategories(p.categories);
   const breadcrumbCategory = mainCategories[0] ?? p.categories[0];
+  // Companies in the niche point readers (and crawlers) at the niche landing,
+  // preferably the page for their own city.
+  const inNiche = p.categories.some((c) => c.slug === NICHE.category);
+  const nicheCities = inNiche ? await getNicheCities() : [];
+  const cityPage =
+    p.city && nicheCities.some((c) => c.slug === p.city?.slug) ? p.city.slug : null;
+  const nicheHref = cityPage ? `${NICHE.path}/${cityPage}` : NICHE.path;
+  const nicheLabel = cityPage
+    ? `Другие бухгалтерии для селлеров ${CITY_GEO[cityPage].prepositional}`
+    : 'Другие бухгалтерии для селлеров маркетплейсов';
+  const categoryHref = (slug: string) =>
+    slug === NICHE.category ? nicheHref : `/providers?country=RU&category=${slug}`;
   const crumbs: Crumb[] = [
     { label: 'Главная', href: '/' },
     { label: 'Компании', href: '/providers?country=RU' },
@@ -137,7 +150,7 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
                 <h3>Специализации</h3>
                 <div className="chips">
                   {specialties.map((c) => (
-                    <Link key={c.id} href={`/providers?country=RU&category=${c.slug}`} className="chip">
+                    <Link key={c.id} href={categoryHref(c.slug)} className="chip">
                       {trCategory(c.slug, c.name)}
                     </Link>
                   ))}
@@ -145,6 +158,13 @@ export default async function ProviderDetailPage({ params }: { params: RoutePara
               </>
             ) : null}
           </section>
+          {inNiche ? (
+            <section>
+              <Link href={nicheHref} className="btn btn-ghost btn-wrap" style={{ marginTop: 24 }}>
+                {nicheLabel} →
+              </Link>
+            </section>
+          ) : null}
         </div>
 
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

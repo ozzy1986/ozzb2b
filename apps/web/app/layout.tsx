@@ -3,6 +3,7 @@ import { Onest } from 'next/font/google';
 import Link from '@/components/AppLink';
 import type { ReactNode } from 'react';
 import { SiteNav } from '@/components/SiteNav';
+import { CITY_GEO, NICHE, getNicheCities } from '@/lib/seo';
 import './globals.css';
 
 // Onest: a calm modern grotesque drawn for Cyrillic first.
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/buhgalteriya-dlya-marketpleysov">Бухгалтерия для маркетплейсов</Link>
               <Link href="/request">Оставить заявку</Link>
             </nav>
+            <NicheFooterLinks />
             <nav className="footer-col" aria-label="Подрядчикам">
               <h4>Подрядчикам</h4>
               <Link href="/register">Регистрация</Link>
@@ -77,6 +79,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </footer>
       </body>
     </html>
+  );
+}
+
+/** Niche landing and its city pages: crawlable from every page of the site. */
+async function NicheFooterLinks() {
+  const cities = await getNicheCities();
+  return (
+    <nav className="footer-col" aria-label={NICHE.name}>
+      <h4>{NICHE.name}</h4>
+      <Link href={NICHE.path}>Вся Россия</Link>
+      {cities.map((c) => (
+        <Link key={c.slug} href={`${NICHE.path}/${c.slug}`}>
+          {CITY_GEO[c.slug].name}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
