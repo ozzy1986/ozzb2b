@@ -96,6 +96,13 @@ GF_SECURITY_ADMIN_PASSWORD=${OZZB2B_GRAFANA_ADMIN_PASSWORD:?missing Grafana admi
 EOF
 chmod 600 .env.prod
 
+# Scraper writes straight to Postgres; refresh the search index after the
+# nightly (02:00-03:00 UTC) and weekly (Mon 03:00 UTC) crawls.
+cat > /etc/cron.d/ozzb2b-reindex <<'CRON'
+30 4 * * * root docker exec ozzb2b-api python -m ozzb2b_api.db.cli reindex >> /var/log/ozzb2b-reindex.log 2>&1
+CRON
+chmod 644 /etc/cron.d/ozzb2b-reindex
+
 log "render alertmanager.yml"
 if [ -n "${OZZB2B_TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${OZZB2B_TELEGRAM_CHAT_ID:-}" ]; then
     # Use envsubst-free sed to avoid extra deps; tokens / chat id never go through
