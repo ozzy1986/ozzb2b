@@ -9,16 +9,17 @@ test.describe('site smoke', () => {
       page.getByRole('heading', { level: 1, name: /B2B-подрядчика/i }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Искать' })).toBeVisible();
-    // Use exact match: the page also renders a "Все компании →" link which
-    // otherwise trips Playwright's strict-mode matcher on "Компании".
-    await expect(
-      page.getByRole('link', { name: 'Компании', exact: true }),
-    ).toBeVisible();
+    // Scope to the header nav: the footer repeats "Компании" / "Категории".
+    const nav = page.getByRole('navigation', { name: 'Основная навигация' });
+    await expect(nav.getByRole('link', { name: 'Компании', exact: true })).toBeVisible();
   });
 
   test('home page navigation reaches categories', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'Категории', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: 'Основная навигация' })
+      .getByRole('link', { name: 'Категории', exact: true })
+      .click();
 
     await expect(page).toHaveURL(/\/categories$/);
     await expect(
