@@ -1,18 +1,13 @@
 import type { Metadata, Viewport } from 'next';
-import { Onest } from 'next/font/google';
 import Link from '@/components/AppLink';
 import type { ReactNode } from 'react';
 import { SiteNav } from '@/components/SiteNav';
 import { CITY_GEO, NICHE, getNicheCities } from '@/lib/seo';
 import './globals.css';
 
-// Onest: a calm modern grotesque drawn for Cyrillic first.
-const onest = Onest({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '600'],
-  display: 'swap',
-  variable: '--font-onest',
-});
+// Onest: a calm modern grotesque drawn for Cyrillic first. The font is
+// self-hosted in app/globals.css (@font-face) so builds never hit
+// fonts.googleapis.com — that dependency used to fail the nightly e2e job.
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://ozzb2b.com'),
@@ -39,7 +34,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ru" className={onest.variable}>
+    <html lang="ru">
+      <head>
+        {/* The CSS uses this file for all Cyrillic text; preload keeps LCP
+            parity with the old next/font/google setup. */}
+        <link
+          rel="preload"
+          href="/fonts/onest/onest-cyrillic.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <header className="site-header">
           <div className="container header-inner">
