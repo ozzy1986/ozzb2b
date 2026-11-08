@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from functools import lru_cache
 from typing import cast
 
@@ -19,20 +20,23 @@ def get_redis() -> Redis:
     library default of 50 sockets per process.
     """
     settings = get_settings()
-    return cast(
-        Redis,
-        Redis.from_url(
-            settings.redis_url,
-            encoding="utf-8",
-            decode_responses=True,
-            max_connections=max(8, settings.redis_max_connections),
-        ),
+    # Annotated local keeps the return type precise across redis-py versions:
+    # 7.x already types from_url() as Redis, 5.x leaves it generic/Any.
+    client: Redis = Redis.from_url(
+        settings.redis_url,
+        encoding="utf-8",
+        decode_responses=True,
+        max_connections=max(8, settings.redis_max_connections),
     )
+    return client
 
 
 async def ping_redis() -> bool:
     """Return True iff Redis is reachable."""
     try:
-        return bool(await get_redis().ping())
+        # redis-py 7 types ping() as `Awaitable[bool] | bool` because the
+        # method is shared with the sync client; on asyncio.Redis it is
+        # always awaitable.
+        return bool(await cast(Awaitable[bool], get_redis().ping()))
     except Exception:
         return False
