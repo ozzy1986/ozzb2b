@@ -67,6 +67,10 @@ for file in $files; do
         # Strip email addresses (local@domain) — the local part is allowed
         # as plain text since the @ + TLD make intent unambiguous.
         snippet_stripped=$(printf '%s' "$snippet_stripped" | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}//g')
+        # Strip bare URLs and domains (https://ozzb2b.com/request, ozzb2b.com/x).
+        # They are technical tokens, not English copy: the whole address including
+        # its path is removed before the English-word scan.
+        snippet_stripped=$(printf '%s' "$snippet_stripped" | sed -E 's#https?://[^[:space:]]+##g; s#[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/[^[:space:]]*)?##g')
         snippet=$(printf '%s' "$snippet_stripped" | tr -d '\r' | sed -e 's/^[[:space:]]\{1,\}//' -e 's/[[:space:]]\{1,\}$//')
         [[ -z "$snippet" ]] && continue
 
